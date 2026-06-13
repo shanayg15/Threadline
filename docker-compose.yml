@@ -1,0 +1,46 @@
+# Local dev stack for Threadline.
+#
+#   docker compose up -d
+#
+# The app and worker run on the host via pnpm during dev (not in compose).
+#
+# NOTE on the Postgres host port: the canonical default is 5432, but this machine
+# already runs other Postgres containers on 5432/5433, so Threadline maps Postgres
+# to host port 5434. DATABASE_URL in .env / .env.example points at 5434 to match.
+# Change both together if you remap it.
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: threadline-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: threadline
+    ports:
+      - "5434:5432"
+    volumes:
+      - threadline_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d threadline"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: threadline-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - threadline_redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  threadline_pgdata:
+  threadline_redisdata:
