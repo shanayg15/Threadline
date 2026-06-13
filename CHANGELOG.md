@@ -30,6 +30,15 @@ pgvector embeddings, and live reads. No agent or messaging yet.
   time — never the synced snapshot (proven by test). `createCheckoutLink` is a stub (M8).
 - Unit tests (Vitest): HMAC, webhook field mapping, local embedder.
 
+### Hardened (post-review)
+
+- `order_fulfilled` events are idempotent at the DB (dedupe-key column +
+  partial-unique index, migration 0005) — retries and the orders/fulfilled +
+  fulfillments/update double-topic yield exactly one event.
+- `fulfillments/update` is handled with the correct fulfillment shape (`order_id`);
+  webhook tenant resolution fails closed on an ambiguous shop domain; HMAC compares
+  decoded base64 bytes; Redis dedupe key is brand-namespaced.
+
 ## M3 — Auth & Dashboard Shell
 
 The console becomes reachable and secure: login/signup, brand-scoped sessions, the
