@@ -15,6 +15,20 @@
       "when": 1781390571664,
       "tag": "0001_init_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1781395252356,
+      "tag": "0002_integrations_unique",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1781395261027,
+      "tag": "0003_append_only_logs",
+      "breakpoints": true
     }
   ]
 }

@@ -11,10 +11,10 @@ type Kind = (typeof integrationKind.enumValues)[number];
 type Status = (typeof integrationStatus.enumValues)[number];
 
 /**
- * Insert or update a brand's integration of a given kind. Credentials are
- * encrypted before storage (AES-256-GCM) and never written in plaintext. There is
- * no unique (brandId, kind) constraint, so this reads then writes inside a
- * transaction (integration config is low-concurrency, admin-driven).
+ * Insert or update a brand's integration of a given kind, atomically. Credentials
+ * are encrypted before storage (AES-256-GCM) and never written in plaintext. The
+ * unique (brandId, kind) index backs the ON CONFLICT, so concurrent upserts can't
+ * create duplicates.
  */
 export async function upsert(
   brandId: string,
@@ -34,43 +34,27 @@ export async function upsert(
             : JSON.stringify(params.credentials),
         );
 
-  return db.transaction(async (tx) => {
-    const existing = (
-      await tx
-        .select()
-        .from(integrations)
-        .where(and(eq(integrations.brandId, brandId), eq(integrations.kind, kind)))
-        .limit(1)
-    )[0];
-
-    if (existing) {
-      return one(
-        await tx
-          .update(integrations)
-          .set({
-            ...(credentialsCiphertext !== undefined ? { credentialsCiphertext } : {}),
-            ...(params.metadata !== undefined ? { metadata: params.metadata } : {}),
-            ...(params.status !== undefined ? { status: params.status } : {}),
-            updatedAt: new Date(),
-          })
-          .where(eq(integrations.id, existing.id))
-          .returning(),
-      );
-    }
-
-    return one(
-      await tx
-        .insert(integrations)
-        .values({
-          brandId,
-          kind,
-          credentialsCiphertext,
-          metadata: params.metadata,
-          status: params.status ?? "connected",
-        })
-        .returning(),
-    );
-  });
+  return one(
+    await db
+      .insert(integrations)
+      .values({
+        brandId,
+        kind,
+        credentialsCiphertext,
+        metadata: params.metadata,
+        status: params.status ?? "connected",
+      })
+      .onConflictDoUpdate({
+        target: [integrations.brandId, integrations.kind],
+        set: {
+          ...(credentialsCiphertext !== undefined ? { credentialsCiphertext } : {}),
+          ...(params.metadata !== undefined ? { metadata: params.metadata } : {}),
+          ...(params.status !== undefined ? { status: params.status } : {}),
+          updatedAt: new Date(),
+        },
+      })
+      .returning(),
+  );
 }
 
 export async function get(brandId: string, kind: Kind): Promise<Integration | undefined> {

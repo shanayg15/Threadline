@@ -14,9 +14,9 @@ compliance, human handoff, and honest lift-vs-holdout measurement.
 ## Status
 
 Built milestone-by-milestone toward a usable V1. **M1 (foundation & infrastructure)
-is complete**; M2 (data model & database) is next. See [`CLAUDE.md`](./CLAUDE.md)
-for the architecture, conventions, and the hard safety invariants every milestone
-must obey.
+and M2 (data model & database) are complete**; M3 (auth & dashboard shell) is next.
+See [`CLAUDE.md`](./CLAUDE.md) for the architecture, conventions, and the hard
+safety invariants every milestone must obey.
 
 ## Tech stack
 
@@ -61,13 +61,19 @@ cp .env.example .env
 #      openssl rand -base64 32   # -> ENCRYPTION_KEY (must decode to 32 bytes)
 #    For local M1/M2 you only need DATABASE_URL, REDIS_URL, AUTH_SECRET, ENCRYPTION_KEY.
 
-# 4. (After M2) create the schema
-# pnpm db:push
+# 4. Create the schema (runs the pgvector extension migration first) and seed
+#    a demo brand with catalog, customers and orders.
+pnpm db:migrate
+pnpm db:seed
 
 # 5. Run the app and (in another shell) the worker
 pnpm dev
 pnpm worker
 ```
+
+> The schema is provisioned via `pnpm db:migrate` because the first migration
+> enables the pgvector extension, which a bare `db:push` cannot do on a fresh
+> database. Once migrated, `pnpm db:push` is fine for quick iteration.
 
 Then open <http://localhost:3000>. Check service health at
 <http://localhost:3000/api/health> — it returns `200` only when both Postgres and

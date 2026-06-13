@@ -1,4 +1,4 @@
-import { index, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { jsonb, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 import { createdAt, uuidPk } from "./_shared";
 import { brands } from "./brands";
@@ -23,5 +23,6 @@ export const integrations = pgTable(
     createdAt: createdAt(),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index("integrations_brand_kind_idx").on(t.brandId, t.kind)],
+  // One integration per kind per brand — enables atomic upsert + prevents dupes.
+  (t) => [uniqueIndex("integrations_brand_kind_uq").on(t.brandId, t.kind)],
 );

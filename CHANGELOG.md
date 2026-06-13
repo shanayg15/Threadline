@@ -4,6 +4,36 @@ All notable changes to Threadline are documented here. The project is built
 milestone-by-milestone toward a usable V1; each milestone is a self-contained,
 verified increment.
 
+## M2 — Data Model & Database Layer
+
+The full relational + vector schema, migrations, dev seed, and a brand-scoped
+repository layer. No app features consume it yet, but every later milestone does.
+
+### Added
+
+- **AES-256-GCM crypto** (`src/lib/db/crypto.ts`) for integration credentials at
+  rest — `iv:authTag:ciphertext`, tamper-evident.
+- **Drizzle schema** — 17 tables split by domain with 19 enum types, typed jsonb
+  blobs, and relations. Multi-tenant: `brandId` on every domain table. Money in
+  integer cents; `vector(EMBEDDING_DIM)` embedding with an HNSW cosine index;
+  unique `(brandId, phoneE164)`; partial-unique one-open pending action per
+  conversation.
+- **Migrations** — `0000` enables pgvector (runs first), `0001` creates the schema;
+  applied via `drizzle-kit migrate` and verified in-sync.
+- **Repository layer** (`src/lib/db/repos`) — thin, typed, brand-scoped data access;
+  every function takes `brandId` first. Append-only audit/consent logs.
+- **Idempotent seed** — "Demo Apparel Co" with voice/policies, an owner (bcrypt),
+  8 products + variants (incl. a sold-out one), 5 opted-in customers, 6 orders, and
+  enabled playbooks. No knowledgeChunks (embeddings are M4).
+
+### Hardened (post-review)
+
+- Unique `(brandId, kind)` on integrations with an atomic `onConflict` upsert
+  (migration 0002) — no find-then-write race.
+- Database-level append-only enforcement: `BEFORE UPDATE OR DELETE` triggers on
+  `audit_log`/`consent_log` (migration 0003) — the invariant no longer relies on
+  repo convention alone.
+
 ## M1 — Foundation & Infrastructure
 
 The empty-but-runnable skeleton everything else builds on. No business logic.
