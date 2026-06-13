@@ -96,7 +96,12 @@ Redis answer, `503` otherwise.
 
 ```
 src/
-  app/                  # Next.js App Router: marketing, console (M3/M7), api/health
+  app/
+    (marketing)/        # public landing (this milestone)
+    (dashboard)/        # authed console — M3/M7
+    onboarding/         # onboarding flow — M7
+    login/  signup/     # auth pages — M3
+    api/health/         # readiness probe
   lib/
     config/env.ts       # zod-validated, typed env loader
     db/                 # Drizzle client (schema + repos in M2)

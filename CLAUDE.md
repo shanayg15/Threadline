@@ -33,8 +33,9 @@ This clones an **idea, not a brand**. All names, copy, and UI are original.
 
 Next.js (TS strict) · Postgres 16 + pgvector · Drizzle ORM · Redis + BullMQ ·
 Auth.js v5 · Tailwind + shadcn/ui · Vercel AI SDK + Anthropic (Claude) · Twilio
-(SMS/MMS) · Promptfoo (evals) · Langfuse (tracing). All permissively licensed;
-external services sit behind swappable adapters.
+(SMS/MMS) · Promptfoo (evals) · Langfuse (tracing). All direct dependencies are
+permissively licensed (MIT/ISC/Apache-2.0/BSD); external services sit behind
+swappable adapters.
 
 ## Hard safety invariants (never violated)
 

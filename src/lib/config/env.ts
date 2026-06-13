@@ -4,10 +4,12 @@ import { z } from "zod";
 /**
  * Typed, validated environment configuration.
  *
- * `process.env` is parsed exactly once, at import time. If anything is missing or
- * malformed the module throws a single aggregated error naming every offending
- * key, so misconfiguration fails fast and loud instead of surfacing as a confusing
- * runtime error deep in a request.
+ * `process.env` is parsed exactly once, at import time. All field-level errors are
+ * aggregated into a single throw naming every offending key, so misconfiguration
+ * fails fast and loud instead of surfacing as a confusing runtime error deep in a
+ * request. (Cross-field/production checks in the superRefine below run only once the
+ * base shape is valid, so a config with both shape and cross-field problems is fixed
+ * in at most two passes.)
  *
  * Server-only: this reads secrets from `process.env` and must never be imported
  * into a client component or exposed via `NEXT_PUBLIC_*`.
@@ -126,8 +128,11 @@ const EnvSchema = z
     }
 
     // Production-only requirements. Kept optional in development/test so the
-    // local M1/M2 stack boots without any external API keys.
-    if (cfg.NODE_ENV === "production") {
+    // local M1/M2 stack boots without any external API keys, and skipped during
+    // `next build` (NEXT_PHASE=phase-production-build) since a build must never
+    // require runtime service secrets — they are enforced at production runtime.
+    const isNextBuild = process.env.NEXT_PHASE === "phase-production-build";
+    if (cfg.NODE_ENV === "production" && !isNextBuild) {
       if (!cfg.ANTHROPIC_API_KEY) {
         ctx.addIssue({
           code: "custom",

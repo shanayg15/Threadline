@@ -4,8 +4,10 @@
   "private": true,
   "description": "Open-source, SMS-first post-purchase conversational-commerce concierge for Shopify DTC brands.",
   "license": "MIT",
+  "packageManager": "pnpm@10.12.3",
   "engines": {
-    "node": ">=20"
+    "node": ">=20",
+    "pnpm": ">=9"
   },
   "scripts": {
     "dev": "next dev",
