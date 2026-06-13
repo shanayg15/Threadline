@@ -20,7 +20,7 @@ export type ActiveBrand = {
  */
 export async function getActiveBrand(): Promise<ActiveBrand> {
   const session = await auth();
-  if (!session?.user?.brandId) {
+  if (!session?.user?.brandId || !session.user.id) {
     redirect("/login");
   }
   return {

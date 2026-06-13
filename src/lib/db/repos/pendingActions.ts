@@ -2,7 +2,7 @@ import { and, eq } from "drizzle-orm";
 
 import { db } from "@/lib/db/client";
 import { pendingActions, type pendingActionType } from "@/lib/db/schema";
-import { one } from "./_util";
+import { isUniqueViolation, one } from "./_util";
 
 export type PendingAction = typeof pendingActions.$inferSelect;
 
@@ -62,7 +62,7 @@ export async function create(
   } catch (err) {
     // Concurrent caller won the race: the partial unique index is the real guard,
     // so surface the same friendly error instead of a raw 23505.
-    if (err && typeof err === "object" && "code" in err && err.code === "23505") {
+    if (isUniqueViolation(err)) {
       throw new Error(`Conversation ${data.conversationId} already has an open pending action`);
     }
     throw err;

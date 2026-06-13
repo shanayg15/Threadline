@@ -8,11 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export function LoginForm() {
+export function LoginForm({ callbackUrl }: { callbackUrl?: string }) {
   const [error, formAction, isPending] = useActionState(authenticate, undefined);
 
   return (
     <form action={formAction} className="space-y-4">
+      {callbackUrl ? <input type="hidden" name="callbackUrl" value={callbackUrl} /> : null}
       <div className="space-y-2">
         <Label htmlFor="email">Email</Label>
         <Input

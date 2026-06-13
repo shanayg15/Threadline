@@ -13,10 +13,10 @@ compliance, human handoff, and honest lift-vs-holdout measurement.
 
 ## Status
 
-Built milestone-by-milestone toward a usable V1. **M1 (foundation & infrastructure)
-and M2 (data model & database) are complete**; M3 (auth & dashboard shell) is next.
-See [`CLAUDE.md`](./CLAUDE.md) for the architecture, conventions, and the hard
-safety invariants every milestone must obey.
+Built milestone-by-milestone toward a usable V1. **M1 (foundation), M2 (data model
+& database), and M3 (auth & dashboard shell) are complete**; M4 (Shopify sync &
+embeddings) is next. See [`CLAUDE.md`](./CLAUDE.md) for the architecture,
+conventions, and the hard safety invariants every milestone must obey.
 
 ## Tech stack
 
@@ -39,6 +39,14 @@ product:
 
 Tokens live in [`src/app/globals.css`](./src/app/globals.css) and
 [`tailwind.config.ts`](./tailwind.config.ts) (light + dark).
+
+**Console shell:** a persistent 240px left nav rail (icon + label, with a filled
+coral active pill) that collapses into a Sheet on mobile, and a 64px top bar with a
+`/ {Brand}` breadcrumb, an avatar dropdown, and a "DEV — SMS mocked" badge. Content
+sits in a max-width 6xl container with a consistent `PageHeader` per page. Type
+scale: page titles `text-2xl` semibold, body `text-sm`; spacing on a 4px grid
+(`gap`/`p` multiples of 4); rounded-`lg`/`xl` surfaces matching the `0.65rem` token
+radius.
 
 ## Prerequisites
 

@@ -62,8 +62,8 @@ V1 is built milestone-by-milestone; do not start a later one until the previous
 one's Definition of Done is met and verified.
 
 1. **Foundation & infrastructure** — repo, Docker, Next.js skeleton, env, health. ✅
-2. **Data model & database** — Drizzle schema, migrations, pgvector, seed, repos.
-3. Auth & dashboard shell
+2. **Data model & database** — Drizzle schema, migrations, pgvector, seed, repos. ✅
+3. **Auth & dashboard shell** — Auth.js v5, brand-scoped sessions, console shell. ✅
 4. Shopify integration, sync & embeddings
 5. Channel layer & compliance middleware
 6. Agent engine, core loop & eval harness

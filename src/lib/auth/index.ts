@@ -11,6 +11,10 @@ const credentialsSchema = z.object({
   password: z.string().min(1),
 });
 
+// Compared against when the email is unknown, so authorize takes ~constant time
+// whether or not the account exists (avoids a user-enumeration timing side channel).
+const DUMMY_HASH = bcrypt.hashSync("threadline-dummy-password", 10);
+
 /**
  * Full Auth.js instance (Node runtime — uses the DB + bcrypt). Credentials are
  * verified against `users.passwordHash` using the SAME bcrypt hasher as the M2
@@ -27,7 +31,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (!parsed.success) return null;
 
         const user = await users.getByEmail(parsed.data.email.toLowerCase().trim());
-        if (!user) return null;
+        if (!user) {
+          await bcrypt.compare(parsed.data.password, DUMMY_HASH);
+          return null;
+        }
 
         const valid = await bcrypt.compare(parsed.data.password, user.passwordHash);
         if (!valid) return null;

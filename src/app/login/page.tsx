@@ -4,7 +4,18 @@ import { LoginForm } from "./login-form";
 
 export const metadata = { title: "Sign in — Threadline" };
 
-export default function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ callbackUrl?: string }>;
+}) {
+  const { callbackUrl } = await searchParams;
+  // Only forward a same-origin relative path (avoids open redirect).
+  const safeCallback =
+    callbackUrl && callbackUrl.startsWith("/") && !callbackUrl.startsWith("//")
+      ? callbackUrl
+      : undefined;
+
   const demoHint =
     env.NODE_ENV !== "production" ? (
       <span>
@@ -19,7 +30,7 @@ export default function LoginPage() {
       subtitle="Sign in to your Threadline console."
       footer={demoHint}
     >
-      <LoginForm />
+      <LoginForm callbackUrl={safeCallback} />
     </AuthShell>
   );
 }

@@ -4,6 +4,38 @@ All notable changes to Threadline are documented here. The project is built
 milestone-by-milestone toward a usable V1; each milestone is a self-contained,
 verified increment.
 
+## M3 — Auth & Dashboard Shell
+
+The console becomes reachable and secure: login/signup, brand-scoped sessions, the
+six-section shell, and routable placeholder pages.
+
+### Added
+
+- **Auth.js v5** with a Credentials provider verifying email/password against
+  `users.passwordHash` (same bcryptjs hasher as the seed), JWT sessions carrying
+  `userId`/`brandId`/`role`. Split edge-safe config so middleware validates the JWT
+  without Node deps.
+- **`getActiveBrand()`** — the sole server-side source of `brandId`; the client
+  never supplies it. **Middleware** protects `(dashboard)` + `/onboarding` and
+  leaves `/api/*` (webhooks, health, auth) and marketing/login/signup public.
+- **Login + signup** pages (server actions): signup creates a brand with a unique
+  slug + an owner, handles duplicate email, signs in, and routes to onboarding.
+- **Console shell** — left nav rail (six sections, filled active pill, mobile
+  Sheet), top bar (`/ {Brand}` breadcrumb, avatar dropdown + logout, "DEV — SMS
+  mocked" badge), brand-scoped `(dashboard)/layout.tsx`.
+- **Shared UI primitives** — `PageHeader`, `EmptyState`, `StatusBadge`,
+  `DataTable` — and routable placeholder pages for all six sections + onboarding.
+- Adds a `users` repo (`getByEmail` is the auth bootstrap; the rest stay
+  brandId-first).
+
+### Hardened (post-review)
+
+- Signup creates brand + owner in one transaction with a unique-violation guard
+  (no orphan brand, no 500 on a concurrent same-email signup).
+- `callbackUrl` threaded through login as a validated same-origin path; constant-
+  time auth (dummy-hash compare for unknown emails); shared `isUniqueViolation()`
+  that also inspects the wrapped Drizzle `.cause`.
+
 ## M2 — Data Model & Database Layer
 
 The full relational + vector schema, migrations, dev seed, and a brand-scoped

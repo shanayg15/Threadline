@@ -4,13 +4,23 @@ import bcrypt from "bcryptjs";
 import { AuthError } from "next-auth";
 import { z } from "zod";
 
+import { db } from "@/lib/db/client";
 import * as brands from "@/lib/db/repos/brands";
+import { isUniqueViolation } from "@/lib/db/repos/_util";
 import * as users from "@/lib/db/repos/users";
+import { brands as brandsTable, users as usersTable } from "@/lib/db/schema";
 import { signIn, signOut } from "./index";
 
 /** Logout: clear the session and return to /login. */
 export async function logout(): Promise<void> {
   await signOut({ redirectTo: "/login" });
+}
+
+/** Only allow same-origin relative paths as a post-login redirect (no open redirect). */
+function safeRedirect(value: FormDataEntryValue | null): string {
+  return typeof value === "string" && value.startsWith("/") && !value.startsWith("//")
+    ? value
+    : "/conversations";
 }
 
 /** Login: verify credentials and redirect into the console. */
@@ -22,7 +32,7 @@ export async function authenticate(
     await signIn("credentials", {
       email: formData.get("email"),
       password: formData.get("password"),
-      redirectTo: "/conversations",
+      redirectTo: safeRedirect(formData.get("callbackUrl")),
     });
   } catch (error) {
     // AuthError = bad credentials; anything else (e.g. the redirect) must propagate.
@@ -79,13 +89,24 @@ export async function register(
     return "An account with that email already exists.";
   }
 
-  const brand = await brands.create({ name: brandName, slug: await uniqueSlug(brandName) });
-  await users.create(brand.id, {
-    email,
-    name,
-    role: "owner",
-    passwordHash: bcrypt.hashSync(password, 10),
-  });
+  const slug = await uniqueSlug(brandName);
+  const passwordHash = bcrypt.hashSync(password, 10);
+
+  // Create brand + owner atomically: the unique index on users.email is the real
+  // guard against a concurrent same-email signup, and a failed user insert must
+  // not leave an orphan brand.
+  try {
+    await db.transaction(async (tx) => {
+      const [brand] = await tx.insert(brandsTable).values({ name: brandName, slug }).returning();
+      if (!brand) throw new Error("brand insert returned no row");
+      await tx
+        .insert(usersTable)
+        .values({ brandId: brand.id, email, name, role: "owner", passwordHash });
+    });
+  } catch (error) {
+    if (isUniqueViolation(error)) return "An account with that email already exists.";
+    throw error;
+  }
 
   try {
     await signIn("credentials", { email, password, redirectTo: "/onboarding" });
