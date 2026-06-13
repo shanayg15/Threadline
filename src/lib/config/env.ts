@@ -47,7 +47,10 @@ const EnvSchema = z
       .refine((v) => /^https?:\/\//.test(v), "APP_URL must start with http:// or https://"),
     AUTH_SECRET: z
       .string()
-      .min(16, "AUTH_SECRET must be at least 16 characters (generate with `openssl rand -base64 32`)"),
+      .min(
+        16,
+        "AUTH_SECRET must be at least 16 characters (generate with `openssl rand -base64 32`)",
+      ),
     DATABASE_URL: z
       .string()
       .min(1, "DATABASE_URL is required")

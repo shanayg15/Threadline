@@ -1,36 +1,114 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Threadline
 
-## Getting Started
+**An open-source, SMS-first post-purchase concierge for Shopify DTC brands.**
 
-First, run the development server:
+Threadline runs one persistent text thread per customer, powered by an AI agent
+grounded in your live Shopify catalog, policies, and order history. It answers fit
+and policy questions before checkout, then follows up after delivery to turn
+returns into exchanges and one-time buyers into regulars — with deterministic
+compliance, human handoff, and honest lift-vs-holdout measurement.
+
+> Open source (MIT). This project clones an **idea, not a brand** — all names,
+> copy, and UI are original.
+
+## Status
+
+Built milestone-by-milestone toward a usable V1. **M1 (foundation & infrastructure)
+is complete**; M2 (data model & database) is next. See [`CLAUDE.md`](./CLAUDE.md)
+for the architecture, conventions, and the hard safety invariants every milestone
+must obey.
+
+## Tech stack
+
+Next.js 16 (App Router, TypeScript strict) · Postgres 16 + pgvector · Drizzle ORM ·
+Redis + BullMQ · Auth.js v5 · Tailwind CSS + shadcn/ui · Vercel AI SDK + Anthropic
+(Claude) · Twilio (SMS/MMS) · Promptfoo (evals) · Langfuse (tracing).
+
+A single Next.js app serves the dashboard, API, and webhooks; a separate worker
+process runs background jobs. External services sit behind swappable adapters.
+
+## Brand
+
+Threadline uses its own visual identity, deliberately distinct from the reference
+product:
+
+- **Primary color:** Threadline Coral `#E8623A` (warm terracotta), over warm-stone
+  neutrals — not a cool slate.
+- **Typeface:** [Plus Jakarta Sans](https://fonts.google.com/specimen/Plus+Jakarta+Sans)
+  for UI, [JetBrains Mono](https://fonts.google.com/specimen/JetBrains+Mono) for code.
+
+Tokens live in [`src/app/globals.css`](./src/app/globals.css) and
+[`tailwind.config.ts`](./tailwind.config.ts) (light + dark).
+
+## Prerequisites
+
+- **Node 20+**, **pnpm 9+**
+- **Docker + Docker Compose**
+
+## Quick start
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+# 1. Start Postgres (pgvector) + Redis
+docker compose up -d
+
+# 2. Install dependencies
+pnpm install
+
+# 3. Configure environment
+cp .env.example .env
+#    Generate secrets and paste them into .env:
+#      openssl rand -base64 32   # -> AUTH_SECRET
+#      openssl rand -base64 32   # -> ENCRYPTION_KEY (must decode to 32 bytes)
+#    For local M1/M2 you only need DATABASE_URL, REDIS_URL, AUTH_SECRET, ENCRYPTION_KEY.
+
+# 4. (After M2) create the schema
+# pnpm db:push
+
+# 5. Run the app and (in another shell) the worker
 pnpm dev
-# or
-bun dev
+pnpm worker
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Then open <http://localhost:3000>. Check service health at
+<http://localhost:3000/api/health> — it returns `200` only when both Postgres and
+Redis answer, `503` otherwise.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+> **Local port note:** `docker-compose.yml` maps Postgres to host port **5434**
+> (not the default 5432) so it can coexist with other local Postgres instances. The
+> `DATABASE_URL` in `.env.example` already points at `5434`; change both together if
+> you remap it. Redis uses `6379`.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Scripts
 
-## Learn More
+| Script                              | Description                          |
+| ----------------------------------- | ------------------------------------ |
+| `pnpm dev`                          | Run the Next.js app (dev)            |
+| `pnpm build` / `pnpm start`         | Production build / serve             |
+| `pnpm worker`                       | Run the background worker            |
+| `pnpm db:generate`                  | Generate Drizzle migrations (M2+)    |
+| `pnpm db:migrate` / `pnpm db:push`  | Apply migrations / push schema (M2+) |
+| `pnpm db:seed`                      | Seed the demo brand fixture (M2+)    |
+| `pnpm test` / `pnpm test:watch`     | Run Vitest                           |
+| `pnpm lint` / `pnpm typecheck`      | ESLint / `tsc --noEmit`              |
+| `pnpm format` / `pnpm format:check` | Prettier write / check               |
 
-To learn more about Next.js, take a look at the following resources:
+## Project structure
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+src/
+  app/                  # Next.js App Router: marketing, console (M3/M7), api/health
+  lib/
+    config/env.ts       # zod-validated, typed env loader
+    db/                 # Drizzle client (schema + repos in M2)
+    auth commerce embeddings channels compliance agent tracking jobs slack
+  components/ui/        # shadcn/ui primitives
+  types/
+worker/                 # background worker entry (BullMQ in M8)
+evals/                  # Promptfoo cases (M6)
+drizzle/                # generated migrations (M2)
+docker-compose.yml      # Postgres + pgvector, Redis
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## License
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+[MIT](./LICENSE) © 2026 Shanay Gaitonde
