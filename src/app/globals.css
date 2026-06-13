@@ -1,0 +1,86 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Threadline design tokens.
+ *
+ * Warm stone neutrals + a coral primary ("Threadline Coral", #E8623A), chosen to
+ * be visibly distinct from the reference product's cool-slate identity. Values are
+ * HSL channels (no hsl() wrapper) so Tailwind can compose them with opacity.
+ */
+@layer base {
+  :root {
+    --background: 36 33% 98%; /* warm cream */
+    --foreground: 24 12% 12%; /* warm near-black */
+
+    --card: 0 0% 100%;
+    --card-foreground: 24 12% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 24 12% 12%;
+
+    --primary: 14 80% 56%; /* Threadline Coral #E8623A */
+    --primary-foreground: 36 40% 98%;
+
+    --secondary: 30 24% 94%;
+    --secondary-foreground: 24 12% 18%;
+
+    --muted: 30 18% 94%;
+    --muted-foreground: 24 7% 42%;
+
+    --accent: 30 24% 92%; /* subtle warm hover surface (shadcn semantics) */
+    --accent-foreground: 24 12% 18%;
+
+    --destructive: 0 72% 48%;
+    --destructive-foreground: 36 40% 98%;
+
+    --border: 30 16% 88%;
+    --input: 30 16% 88%;
+    --ring: 14 80% 56%;
+
+    --radius: 0.65rem;
+  }
+
+  .dark {
+    --background: 24 14% 8%; /* warm espresso */
+    --foreground: 36 24% 92%;
+
+    --card: 24 13% 11%;
+    --card-foreground: 36 24% 92%;
+
+    --popover: 24 13% 11%;
+    --popover-foreground: 36 24% 92%;
+
+    --primary: 14 82% 60%; /* slightly brighter coral on dark */
+    --primary-foreground: 24 20% 10%;
+
+    --secondary: 24 10% 17%;
+    --secondary-foreground: 36 24% 92%;
+
+    --muted: 24 10% 17%;
+    --muted-foreground: 30 10% 64%;
+
+    --accent: 24 10% 19%;
+    --accent-foreground: 36 24% 92%;
+
+    --destructive: 0 64% 46%;
+    --destructive-foreground: 36 40% 98%;
+
+    --border: 24 10% 20%;
+    --input: 24 10% 22%;
+    --ring: 14 82% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings:
+      "rlig" 1,
+      "calt" 1;
+  }
+}
