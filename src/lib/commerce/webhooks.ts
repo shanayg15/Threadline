@@ -1,5 +1,3 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
-
 import { and, eq, sql } from "drizzle-orm";
 
 import { env } from "@/lib/config/env";
@@ -8,30 +6,18 @@ import { decrypt } from "@/lib/db/crypto";
 import * as eventsRepo from "@/lib/db/repos/events";
 import { integrations, orders } from "@/lib/db/schema";
 import { redis } from "@/lib/redis";
+import { upsertCustomer, upsertOrder, upsertProduct } from "./sync-upserts";
 import {
-  upsertCustomer,
-  upsertOrder,
-  upsertProduct,
-  type SyncOrder,
-  type SyncProduct,
-} from "./sync-upserts";
+  mapWebhookCustomer,
+  mapWebhookOrder,
+  mapWebhookProduct,
+  type RestCustomer,
+  type RestOrder,
+  type RestProduct,
+} from "./webhook-parse";
 
-/**
- * Verify a Shopify webhook HMAC against the RAW request body. MUST be called on
- * the raw text before JSON parsing — parsing/re-serializing changes the bytes and
- * breaks the signature. Constant-time comparison.
- */
-export function verifyShopifyHmac(
-  rawBody: string,
-  hmacHeader: string | null,
-  secret: string,
-): boolean {
-  if (!hmacHeader) return false;
-  const digest = createHmac("sha256", secret).update(rawBody, "utf8").digest("base64");
-  const a = Buffer.from(digest);
-  const b = Buffer.from(hmacHeader);
-  return a.length === b.length && timingSafeEqual(a, b);
-}
+// Re-export the pure verifier so callers (route + tests) import from one place.
+export { verifyShopifyHmac } from "./webhook-parse";
 
 /**
  * Resolve the brand + webhook secret for an incoming Shopify shop domain. The brand
@@ -79,124 +65,6 @@ export async function isFirstDelivery(webhookId: string | null): Promise<boolean
   } catch {
     return true;
   }
-}
-
-// ---- REST webhook payload mapping (numeric ids → gid form, matching GraphQL sync) ----
-
-type RestVariant = {
-  id: number;
-  title?: string | null;
-  sku?: string | null;
-  price?: string | null;
-  inventory_quantity?: number | null;
-  option1?: string | null;
-  option2?: string | null;
-  option3?: string | null;
-};
-type RestProduct = {
-  id: number;
-  title: string;
-  body_html?: string | null;
-  status?: string | null;
-  options?: Array<{ name: string; position: number }>;
-  variants?: RestVariant[];
-};
-type RestCustomer = {
-  id: number;
-  first_name?: string | null;
-  last_name?: string | null;
-  email?: string | null;
-  phone?: string | null;
-};
-type RestOrder = {
-  id: number;
-  name?: string | null;
-  total_price?: string | null;
-  fulfillment_status?: string | null;
-  customer?: { id: number } | null;
-  fulfillments?: Array<{
-    tracking_number?: string | null;
-    tracking_company?: string | null;
-    created_at?: string | null;
-  }>;
-  line_items?: Array<{
-    variant_id?: number | null;
-    title?: string | null;
-    quantity?: number | null;
-    price?: string | null;
-  }>;
-};
-
-function centsFrom(price: string | number | null | undefined): number | null {
-  if (price == null) return null;
-  const n = typeof price === "number" ? price : Number.parseFloat(price);
-  return Number.isFinite(n) ? Math.round(n * 100) : null;
-}
-
-function restFulfillment(
-  status: string | null | undefined,
-): "unfulfilled" | "fulfilled" | "partial" {
-  if (status === "fulfilled") return "fulfilled";
-  if (status === "partial") return "partial";
-  return "unfulfilled";
-}
-
-function mapWebhookProduct(p: RestProduct): SyncProduct {
-  const optionNames = (p.options ?? []).sort((a, b) => a.position - b.position).map((o) => o.name);
-  return {
-    shopifyProductId: `gid://shopify/Product/${p.id}`,
-    title: p.title,
-    description: p.body_html ?? null,
-    status: p.status === "archived" ? "archived" : "active",
-    variants: (p.variants ?? []).map((v) => {
-      const values = [v.option1, v.option2, v.option3];
-      const options: Record<string, string> = {};
-      optionNames.forEach((name, i) => {
-        const val = values[i];
-        if (val) options[name.toLowerCase()] = val;
-      });
-      return {
-        shopifyVariantId: `gid://shopify/ProductVariant/${v.id}`,
-        title: v.title ?? null,
-        sku: v.sku ?? null,
-        priceCents: centsFrom(v.price),
-        inventoryQty: v.inventory_quantity ?? null,
-        options,
-      };
-    }),
-  };
-}
-
-function mapWebhookCustomer(c: RestCustomer) {
-  const name = [c.first_name, c.last_name].filter(Boolean).join(" ") || null;
-  return {
-    shopifyCustomerId: `gid://shopify/Customer/${c.id}`,
-    phoneE164: c.phone ?? null,
-    name,
-    email: c.email ?? null,
-  };
-}
-
-function mapWebhookOrder(o: RestOrder): SyncOrder {
-  const fulfillment = o.fulfillments?.[0];
-  return {
-    shopifyOrderId: `gid://shopify/Order/${o.id}`,
-    shopifyCustomerId: o.customer ? `gid://shopify/Customer/${o.customer.id}` : null,
-    status: o.name ?? null,
-    totalCents: centsFrom(o.total_price),
-    fulfillmentStatus: restFulfillment(o.fulfillment_status),
-    trackingNumber: fulfillment?.tracking_number ?? null,
-    carrier: fulfillment?.tracking_company ?? null,
-    shippedAt: fulfillment?.created_at ? new Date(fulfillment.created_at) : null,
-    // Carrier "delivered" arrives via tracking webhooks (M8), not orders/fulfilled.
-    deliveredAt: null,
-    lineItems: (o.line_items ?? []).map((li) => ({
-      shopifyVariantId: li.variant_id ? `gid://shopify/ProductVariant/${li.variant_id}` : null,
-      title: li.title ?? null,
-      qty: li.quantity ?? 1,
-      priceCents: centsFrom(li.price),
-    })),
-  };
 }
 
 /**
