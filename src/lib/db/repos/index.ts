@@ -12,6 +12,7 @@
  * Import namespaced: `import { customers, conversations } from "@/lib/db/repos"`.
  */
 export * as brands from "./brands";
+export * as users from "./users";
 export * as customers from "./customers";
 export * as conversations from "./conversations";
 export * as messages from "./messages";
