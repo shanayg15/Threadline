@@ -8,10 +8,12 @@ import { integrations, orders } from "@/lib/db/schema";
 import { redis } from "@/lib/redis";
 import { upsertCustomer, upsertOrder, upsertProduct } from "./sync-upserts";
 import {
+  fulfillmentOrderGid,
   mapWebhookCustomer,
   mapWebhookOrder,
   mapWebhookProduct,
   type RestCustomer,
+  type RestFulfillment,
   type RestOrder,
   type RestProduct,
 } from "./webhook-parse";
@@ -22,8 +24,9 @@ export { verifyShopifyHmac } from "./webhook-parse";
 /**
  * Resolve the brand + webhook secret for an incoming Shopify shop domain. The brand
  * is found via its `shopify` integration (shop domain stored, non-secret, in
- * metadata); the secret comes from the integration's encrypted creds, falling back
- * to env for single-store dev.
+ * metadata). FAILS CLOSED if the domain is ambiguous (maps to 0 or >1 brands). The
+ * per-brand secret comes from the integration's encrypted creds; the single-store
+ * env secret is only borrowed when the env store IS this shop (never cross-brand).
  */
 export async function resolveWebhookContext(
   shopDomain: string,
@@ -37,40 +40,63 @@ export async function resolveWebhookContext(
         sql`${integrations.metadata}->>'shopDomain' = ${shopDomain}`,
       ),
     )
-    .limit(1);
+    .limit(2);
 
-  const row = rows[0];
-  if (!row) return null;
+  if (rows.length !== 1) return null; // unknown or ambiguous shop → fail closed
+  const row = rows[0]!;
 
-  let secret = env.SHOPIFY_WEBHOOK_SECRET ?? null;
+  let secret: string | null = null;
   if (row.ct) {
     try {
       const creds = JSON.parse(decrypt(row.ct)) as { webhookSecret?: string };
       if (creds.webhookSecret) secret = creds.webhookSecret;
     } catch {
-      // fall back to env secret
+      // corrupt per-brand creds → don't borrow another store's secret
     }
+  }
+  if (!secret && env.SHOPIFY_SHOP_DOMAIN === shopDomain) {
+    secret = env.SHOPIFY_WEBHOOK_SECRET ?? null;
   }
   if (!secret) return null;
   return { brandId: row.brandId, webhookSecret: secret };
 }
 
-/** Dedupe by X-Shopify-Webhook-Id (Shopify reuses the id on retries). Redis NX+TTL.
- * Fails open if Redis is unreachable — the upserts are idempotent anyway. */
-export async function isFirstDelivery(webhookId: string | null): Promise<boolean> {
+/** Fast-path dedupe by X-Shopify-Webhook-Id (Shopify reuses the id on retries),
+ * brand-namespaced. Redis NX+TTL; fails open (the real idempotency guarantee is at
+ * the DB: upserts ON CONFLICT and recordIfNew for events). */
+export async function isFirstDelivery(brandId: string, webhookId: string | null): Promise<boolean> {
   if (!webhookId) return true;
   try {
-    const set = await redis.set(`shopify:webhook:${webhookId}`, "1", "EX", 86400, "NX");
+    const set = await redis.set(`shopify:webhook:${brandId}:${webhookId}`, "1", "EX", 86400, "NX");
     return set === "OK";
   } catch {
     return true;
   }
 }
 
+/** Record an at-most-once order_fulfilled event for an order (idempotent across
+ * retries and the orders/fulfilled + fulfillments/update double-topic). */
+async function recordFulfilledEvent(brandId: string, shopifyOrderId: string): Promise<void> {
+  const row = (
+    await db
+      .select({ id: orders.id, customerId: orders.customerId })
+      .from(orders)
+      .where(and(eq(orders.brandId, brandId), eq(orders.shopifyOrderId, shopifyOrderId)))
+      .limit(1)
+  )[0];
+  if (!row) return;
+  await eventsRepo.recordIfNew(brandId, {
+    type: "order_fulfilled",
+    customerId: row.customerId,
+    dedupeKey: `order_fulfilled:${row.id}`,
+    payload: { orderId: row.id, shopifyOrderId },
+  });
+}
+
 /**
- * Dispatch a verified webhook to the right idempotent upsert. For orders/fulfilled
- * and fulfillments/update it ALSO records an `order_fulfilled` event for M8's
- * lifecycle engine — and SENDS NOTHING (no outbound here).
+ * Dispatch a verified webhook to the right idempotent handler. orders/fulfilled and
+ * fulfillments/update record an order_fulfilled event for M8's lifecycle engine —
+ * and SEND NOTHING (no outbound here).
  */
 export async function handleShopifyWebhook(
   topic: string,
@@ -93,22 +119,27 @@ export async function handleShopifyWebhook(
       await upsertOrder(brandId, mapWebhookOrder(payload as RestOrder));
       return;
 
-    case "orders/fulfilled":
-    case "fulfillments/update": {
+    case "orders/fulfilled": {
+      // Order-shaped payload.
       const order = mapWebhookOrder(payload as RestOrder);
       await upsertOrder(brandId, order);
-      const row = await db
-        .select({ id: orders.id, customerId: orders.customerId })
-        .from(orders)
-        .where(and(eq(orders.brandId, brandId), eq(orders.shopifyOrderId, order.shopifyOrderId)))
-        .limit(1);
-      if (row[0]) {
-        await eventsRepo.record(brandId, {
-          type: "order_fulfilled",
-          customerId: row[0].customerId,
-          payload: { orderId: row[0].id, shopifyOrderId: order.shopifyOrderId },
-        });
-      }
+      await recordFulfilledEvent(brandId, order.shopifyOrderId);
+      return;
+    }
+
+    case "fulfillments/update": {
+      // Fulfillment-shaped payload: the order is referenced via order_id.
+      const f = payload as RestFulfillment;
+      const orderGid = fulfillmentOrderGid(f);
+      await db
+        .update(orders)
+        .set({
+          trackingNumber: f.tracking_number ?? null,
+          carrier: f.tracking_company ?? null,
+          shippedAt: f.created_at ? new Date(f.created_at) : null,
+        })
+        .where(and(eq(orders.brandId, brandId), eq(orders.shopifyOrderId, orderGid)));
+      await recordFulfilledEvent(brandId, orderGid);
       return;
     }
 

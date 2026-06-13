@@ -17,10 +17,11 @@ export function verifyShopifyHmac(
   secret: string,
 ): boolean {
   if (!hmacHeader) return false;
-  const digest = createHmac("sha256", secret).update(rawBody, "utf8").digest("base64");
-  const a = Buffer.from(digest);
-  const b = Buffer.from(hmacHeader);
-  return a.length === b.length && timingSafeEqual(a, b);
+  // Compare the decoded signature BYTES (robust to base64 padding/whitespace), in
+  // constant time. The length guard keeps timingSafeEqual from throwing.
+  const expected = createHmac("sha256", secret).update(rawBody, "utf8").digest();
+  const provided = Buffer.from(hmacHeader.trim(), "base64");
+  return expected.length === provided.length && timingSafeEqual(expected, provided);
 }
 
 export function centsFrom(price: string | number | null | undefined): number | null {
@@ -118,6 +119,20 @@ export function mapWebhookCustomer(c: RestCustomer): SyncCustomer {
     name,
     email: c.email ?? null,
   };
+}
+
+// Shopify's fulfillments/update webhook delivers a FULFILLMENT, not an order: its
+// top-level `id` is the fulfillment id; the order is referenced via `order_id`.
+export type RestFulfillment = {
+  id: number;
+  order_id: number;
+  tracking_number?: string | null;
+  tracking_company?: string | null;
+  created_at?: string | null;
+};
+
+export function fulfillmentOrderGid(f: RestFulfillment): string {
+  return `gid://shopify/Order/${f.order_id}`;
 }
 
 export function mapWebhookOrder(o: RestOrder): SyncOrder {

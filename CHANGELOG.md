@@ -4,6 +4,32 @@ All notable changes to Threadline are documented here. The project is built
 milestone-by-milestone toward a usable V1; each milestone is a self-contained,
 verified increment.
 
+## M4 — Shopify Integration, Sync & Embeddings
+
+The data plane the agent will use (M6): catalog/customer/order sync, webhooks,
+pgvector embeddings, and live reads. No agent or messaging yet.
+
+### Added
+
+- **Commerce adapter** (`CommerceProvider`) with a real fetch-based **Shopify**
+  GraphQL provider (rate-limit backoff + cursor pagination) and a fixture-backed
+  **mock** provider, chosen by credential presence. Credentials resolve from the
+  per-brand encrypted `integrations` row or `SHOPIFY_*` env; never logged.
+- **Idempotent sync** keyed by Shopify id (partial-unique indexes, migration 0004):
+  money in integer cents, `fitNotes` preserved across re-sync, synced customers
+  default `consentStatus: unknown` (a phone is not consent), no-phone customers
+  skipped. CLIs: `sync-cli`, `embed-cli`.
+- **HMAC-verified webhooks** at `/api/webhooks/shopify`: verifies the signature on
+  the RAW body before parsing (tamper/unknown shop → 401), dedupes retries by
+  webhook id (Redis), and on `orders/fulfilled` records an `order_fulfilled` event
+  (and sends nothing). Adds an `events` repo.
+- **Embeddings**: `Embedder` interface (OpenAI default, Voyage stub, keyless local),
+  `embedBrandKnowledge` (catalog + policy chunks, atomic replace), and a hybrid
+  `searchCatalog` (pgvector KNN + keyword ILIKE).
+- **Live reads** `getVariantLive` / `getOrderStatus` hit the live source at answer
+  time — never the synced snapshot (proven by test). `createCheckoutLink` is a stub (M8).
+- Unit tests (Vitest): HMAC, webhook field mapping, local embedder.
+
 ## M3 — Auth & Dashboard Shell
 
 The console becomes reachable and secure: login/signup, brand-scoped sessions, the

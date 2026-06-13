@@ -14,9 +14,21 @@ compliance, human handoff, and honest lift-vs-holdout measurement.
 ## Status
 
 Built milestone-by-milestone toward a usable V1. **M1 (foundation), M2 (data model
-& database), and M3 (auth & dashboard shell) are complete**; M4 (Shopify sync &
-embeddings) is next. See [`CLAUDE.md`](./CLAUDE.md) for the architecture,
-conventions, and the hard safety invariants every milestone must obey.
+& database), M3 (auth & dashboard shell), and M4 (Shopify sync & embeddings) are
+complete**; M5 (channel layer & compliance middleware) is next. See
+[`CLAUDE.md`](./CLAUDE.md) for the architecture, conventions, and the hard safety
+invariants every milestone must obey.
+
+**Keyless dev:** without Shopify or OpenAI credentials, the app falls back to a
+fixture-backed mock commerce provider and a deterministic local embedder
+(`EMBEDDINGS_PROVIDER=local`), so the full sync → embed → search → live-read path
+runs end-to-end. Set the real `SHOPIFY_*` / `OPENAI_API_KEY` to use the live
+integrations.
+
+```bash
+pnpm tsx src/lib/commerce/sync-cli.ts <brandId>     # sync catalog/customers/orders
+pnpm tsx src/lib/embeddings/embed-cli.ts <brandId>  # build the pgvector knowledge base
+```
 
 ## Tech stack
 

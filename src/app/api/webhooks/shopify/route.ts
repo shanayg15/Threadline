@@ -33,8 +33,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "invalid signature" }, { status: 401 });
   }
 
-  // Idempotency: Shopify reuses the webhook id on retries.
-  if (!(await isFirstDelivery(webhookId))) {
+  // Idempotency fast-path: Shopify reuses the webhook id on retries.
+  if (!(await isFirstDelivery(ctx.brandId, webhookId))) {
     return NextResponse.json({ ok: true, deduped: true });
   }
 

@@ -36,6 +36,13 @@
       "when": 1781398995443,
       "tag": "0004_shopify_unique_keys",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1781402366569,
+      "tag": "0005_events_dedupe",
+      "breakpoints": true
     }
   ]
 }

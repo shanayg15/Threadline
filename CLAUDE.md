@@ -64,7 +64,8 @@ one's Definition of Done is met and verified.
 1. **Foundation & infrastructure** — repo, Docker, Next.js skeleton, env, health. ✅
 2. **Data model & database** — Drizzle schema, migrations, pgvector, seed, repos. ✅
 3. **Auth & dashboard shell** — Auth.js v5, brand-scoped sessions, console shell. ✅
-4. Shopify integration, sync & embeddings
+4. **Shopify integration, sync & embeddings** — commerce adapter, sync, webhooks,
+   pgvector embeddings, live reads. ✅
 5. Channel layer & compliance middleware
 6. Agent engine, core loop & eval harness
 7. Console UI, handoff, read pages & onboarding

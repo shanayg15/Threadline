@@ -1,0 +1,2 @@
+ALTER TABLE "events" ADD COLUMN "dedupe_key" text;--> statement-breakpoint
+CREATE UNIQUE INDEX "events_brand_dedupe_uq" ON "events" USING btree ("brand_id","dedupe_key") WHERE "events"."dedupe_key" is not null;

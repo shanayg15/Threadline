@@ -150,8 +150,16 @@ export class ShopifyGraphQLClient {
       const json = (await res.json()) as GraphQLEnvelope<T>;
       const throttled = json.errors?.some((e) => e.extensions?.code === "THROTTLED");
       if (throttled) {
-        const rate = json.extensions?.cost?.throttleStatus?.restoreRate ?? 50;
-        await sleep(Math.max(1000, (200 / Math.max(1, rate)) * 1000));
+        // Wait for the cost budget to restore: time ≈ deficit / restoreRate.
+        const status = json.extensions?.cost?.throttleStatus;
+        const restoreRate = status?.restoreRate ?? 50;
+        const available = status?.currentlyAvailable ?? 0;
+        const deficit = Math.max(0, 1000 - available);
+        const waitMs = Math.min(
+          10_000,
+          Math.max(1000, (deficit / Math.max(1, restoreRate)) * 1000),
+        );
+        await sleep(waitMs);
         continue;
       }
       if (json.errors?.length) {
@@ -417,6 +425,8 @@ export class ShopifyCommerce extends BaseCommerce {
       variantId,
       title: data.node.title,
       priceCents: priceToCents(data.node.price) ?? 0,
+      // inventoryQuantity is the summed quantity across locations (informational);
+      // availableForSale is the authoritative purchasability signal — trust it.
       inventoryQty: data.node.inventoryQuantity ?? 0,
       available: data.node.availableForSale,
       options: optionsFrom(data.node.selectedOptions),

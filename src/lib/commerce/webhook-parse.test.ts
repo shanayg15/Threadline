@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   centsFrom,
+  fulfillmentOrderGid,
   mapWebhookCustomer,
   mapWebhookOrder,
   mapWebhookProduct,
@@ -29,6 +30,17 @@ describe("verifyShopifyHmac", () => {
   });
   it("rejects a missing header", () => {
     expect(verifyShopifyHmac(body, null, SECRET)).toBe(false);
+  });
+  it("tolerates trailing whitespace in the header (decoded-byte compare)", () => {
+    expect(verifyShopifyHmac(body, `${sign(body)}\n`, SECRET)).toBe(true);
+  });
+});
+
+describe("fulfillmentOrderGid", () => {
+  it("derives the ORDER gid from order_id, not the fulfillment id", () => {
+    // fulfillments/update payloads are fulfillment-shaped: top-level id is the
+    // fulfillment, the order is order_id.
+    expect(fulfillmentOrderGid({ id: 88001, order_id: 7001 })).toBe("gid://shopify/Order/7001");
   });
 });
 
