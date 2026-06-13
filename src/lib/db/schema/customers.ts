@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { jsonb, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 import { createdAt, uuidPk } from "./_shared";
@@ -31,5 +32,10 @@ export const customers = pgTable(
     tags: jsonb().$type<string[]>(),
     createdAt: createdAt(),
   },
-  (t) => [uniqueIndex("customers_brand_phone_uq").on(t.brandId, t.phoneE164)],
+  (t) => [
+    uniqueIndex("customers_brand_phone_uq").on(t.brandId, t.phoneE164),
+    uniqueIndex("customers_brand_shopify_uq")
+      .on(t.brandId, t.shopifyCustomerId)
+      .where(sql`${t.shopifyCustomerId} is not null`),
+  ],
 );

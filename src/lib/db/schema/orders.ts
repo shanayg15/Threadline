@@ -1,4 +1,5 @@
-import { index, integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { index, integer, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 import { createdAt, uuidPk } from "./_shared";
 import { brands } from "./brands";
@@ -33,6 +34,9 @@ export const orders = pgTable(
   (t) => [
     index("orders_brand_customer_idx").on(t.brandId, t.customerId),
     index("orders_brand_fulfillment_idx").on(t.brandId, t.fulfillmentStatus),
+    uniqueIndex("orders_brand_shopify_uq")
+      .on(t.brandId, t.shopifyOrderId)
+      .where(sql`${t.shopifyOrderId} is not null`),
   ],
 );
 

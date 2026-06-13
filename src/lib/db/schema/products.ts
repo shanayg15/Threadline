@@ -1,4 +1,14 @@
-import { index, integer, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import {
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+} from "drizzle-orm/pg-core";
 
 import { uuidPk } from "./_shared";
 import { brands } from "./brands";
@@ -23,7 +33,14 @@ export const products = pgTable(
     status: productStatus().notNull().default("active"),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index("products_brand_idx").on(t.brandId)],
+  (t) => [
+    index("products_brand_idx").on(t.brandId),
+    // Idempotent sync/webhook upserts key on the Shopify id (nullable for
+    // manually-created products, hence partial).
+    uniqueIndex("products_brand_shopify_uq")
+      .on(t.brandId, t.shopifyProductId)
+      .where(sql`${t.shopifyProductId} is not null`),
+  ],
 );
 
 /**
@@ -54,5 +71,8 @@ export const productVariants = pgTable(
   (t) => [
     index("product_variants_brand_idx").on(t.brandId),
     index("product_variants_product_idx").on(t.productId),
+    uniqueIndex("product_variants_brand_shopify_uq")
+      .on(t.brandId, t.shopifyVariantId)
+      .where(sql`${t.shopifyVariantId} is not null`),
   ],
 );

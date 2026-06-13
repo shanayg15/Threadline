@@ -1,0 +1,4 @@
+CREATE UNIQUE INDEX "customers_brand_shopify_uq" ON "customers" USING btree ("brand_id","shopify_customer_id") WHERE "customers"."shopify_customer_id" is not null;--> statement-breakpoint
+CREATE UNIQUE INDEX "product_variants_brand_shopify_uq" ON "product_variants" USING btree ("brand_id","shopify_variant_id") WHERE "product_variants"."shopify_variant_id" is not null;--> statement-breakpoint
+CREATE UNIQUE INDEX "products_brand_shopify_uq" ON "products" USING btree ("brand_id","shopify_product_id") WHERE "products"."shopify_product_id" is not null;--> statement-breakpoint
+CREATE UNIQUE INDEX "orders_brand_shopify_uq" ON "orders" USING btree ("brand_id","shopify_order_id") WHERE "orders"."shopify_order_id" is not null;
