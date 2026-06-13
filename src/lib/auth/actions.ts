@@ -6,7 +6,12 @@ import { z } from "zod";
 
 import * as brands from "@/lib/db/repos/brands";
 import * as users from "@/lib/db/repos/users";
-import { signIn } from "./index";
+import { signIn, signOut } from "./index";
+
+/** Logout: clear the session and return to /login. */
+export async function logout(): Promise<void> {
+  await signOut({ redirectTo: "/login" });
+}
 
 /** Login: verify credentials and redirect into the console. */
 export async function authenticate(

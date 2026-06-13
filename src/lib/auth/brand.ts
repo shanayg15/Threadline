@@ -3,7 +3,13 @@ import { redirect } from "next/navigation";
 import { auth } from "./index";
 
 export type BrandRole = "owner" | "agent" | "viewer";
-export type ActiveBrand = { brandId: string; userId: string; role: BrandRole };
+export type ActiveBrand = {
+  brandId: string;
+  userId: string;
+  role: BrandRole;
+  name: string | null;
+  email: string | null;
+};
 
 /**
  * The server-side source of truth for the active tenant. Every dashboard server
@@ -21,5 +27,7 @@ export async function getActiveBrand(): Promise<ActiveBrand> {
     brandId: session.user.brandId,
     userId: session.user.id,
     role: session.user.role,
+    name: session.user.name ?? null,
+    email: session.user.email ?? null,
   };
 }
