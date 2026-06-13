@@ -19,6 +19,7 @@ export * as messages from "./messages";
 export * as orders from "./orders";
 export * as products from "./products";
 export * as pendingActions from "./pendingActions";
+export * as events from "./events";
 export * as knowledge from "./knowledge";
 export * as integrations from "./integrations";
 export * as audit from "./audit";
