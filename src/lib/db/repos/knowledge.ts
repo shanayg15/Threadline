@@ -8,22 +8,31 @@ export type KnowledgeChunk = typeof knowledgeChunks.$inferSelect;
 
 type SourceType = (typeof knowledgeSourceType.enumValues)[number];
 
-export async function insert(
-  brandId: string,
-  data: {
-    sourceType: SourceType;
-    content: string;
-    embedding: number[];
-    refId?: string | null;
-    metadata?: Record<string, unknown>;
-  },
-): Promise<KnowledgeChunk> {
+export type NewChunk = {
+  sourceType: SourceType;
+  content: string;
+  embedding: number[];
+  refId?: string | null;
+  metadata?: Record<string, unknown>;
+};
+
+export async function insert(brandId: string, data: NewChunk): Promise<KnowledgeChunk> {
   return one(
     await db
       .insert(knowledgeChunks)
       .values({ ...data, brandId })
       .returning(),
   );
+}
+
+/** Batch insert chunks for a brand (used by the embedding pipeline). */
+export async function insertMany(brandId: string, rows: NewChunk[]): Promise<number> {
+  if (rows.length === 0) return 0;
+  const inserted = await db
+    .insert(knowledgeChunks)
+    .values(rows.map((r) => ({ ...r, brandId })))
+    .returning({ id: knowledgeChunks.id });
+  return inserted.length;
 }
 
 /**
