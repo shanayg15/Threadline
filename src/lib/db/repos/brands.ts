@@ -21,3 +21,23 @@ export async function getBySlug(slug: string): Promise<Brand | undefined> {
 export async function create(data: NewBrand): Promise<Brand> {
   return one(await db.insert(brands).values(data).returning());
 }
+
+/** Editable brand config (M7 onboarding + settings). */
+export type BrandPatch = Partial<
+  Pick<
+    NewBrand,
+    | "name"
+    | "voiceConfig"
+    | "policies"
+    | "quietHours"
+    | "frequencyCaps"
+    | "supervisedMode"
+    | "channelConfig"
+  >
+>;
+
+export async function update(brandId: string, patch: BrandPatch): Promise<Brand | undefined> {
+  if (Object.keys(patch).length === 0) return getById(brandId);
+  const rows = await db.update(brands).set(patch).where(eq(brands.id, brandId)).returning();
+  return rows[0];
+}

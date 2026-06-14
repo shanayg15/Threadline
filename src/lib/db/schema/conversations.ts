@@ -19,6 +19,7 @@ import {
   conversationChannel,
   conversationStatus,
   deliveryStatus,
+  messageApprovalStatus,
   messageDirection,
   messageSender,
 } from "./enums";
@@ -67,6 +68,10 @@ export const messages = pgTable(
     mediaUrls: jsonb().$type<string[]>(),
     channelMessageId: text(),
     deliveryStatus: deliveryStatus(),
+    // Supervised mode (M7): an outbound agent reply is held as a draft (approvalStatus
+    // 'pending') instead of being sent, until a human approves/rejects it.
+    approvalStatus: messageApprovalStatus(),
+    approvedByUserId: uuid().references(() => users.id),
     costCents: integer(),
     model: text(),
     createdAt: createdAt(),
@@ -79,5 +84,9 @@ export const messages = pgTable(
     uniqueIndex("messages_brand_channel_msg_id_uniq")
       .on(t.brandId, t.channelMessageId)
       .where(sql`${t.channelMessageId} is not null`),
+    // At most one held draft awaiting approval per conversation.
+    uniqueIndex("messages_one_open_draft_per_conversation")
+      .on(t.conversationId)
+      .where(sql`${t.approvalStatus} = 'pending'`),
   ],
 );

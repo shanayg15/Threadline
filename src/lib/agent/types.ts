@@ -14,6 +14,8 @@ export type AgentBrand = {
   name: string;
   voice: VoiceConfig | null;
   policies: Policies | null;
+  /** When true (M7), the agent's reply is HELD as a draft for human approval, not sent. */
+  supervisedMode: boolean;
 };
 
 /** The customer the thread belongs to (no PII beyond what grounds a reply). */
@@ -97,6 +99,14 @@ export type AgentOutcome =
       status: "replied";
       reply: string;
       escalated: boolean;
+      proposedActionId: string | null;
+      toolsUsed: string[];
+      model: string;
+    }
+  | {
+      status: "drafted";
+      draftId: string;
+      reply: string;
       proposedActionId: string | null;
       toolsUsed: string[];
       model: string;

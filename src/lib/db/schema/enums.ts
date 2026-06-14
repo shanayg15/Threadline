@@ -53,6 +53,15 @@ export const deliveryStatus = pgEnum("delivery_status", [
   "received",
 ]);
 
+/** Supervised-mode approval state of an outbound message held as a draft (M7). A
+ * normal sent message has a NULL approval status; a held draft is `pending` until a
+ * human approves (then sent) or rejects it. */
+export const messageApprovalStatus = pgEnum("message_approval_status", [
+  "pending",
+  "approved",
+  "rejected",
+]);
+
 export const pendingActionType = pgEnum("pending_action_type", [
   "place_order",
   "create_exchange",

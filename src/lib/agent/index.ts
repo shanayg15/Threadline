@@ -3,6 +3,7 @@ import { getCommerceProvider } from "@/lib/commerce";
 import * as auditRepo from "@/lib/db/repos/audit";
 import * as brandsRepo from "@/lib/db/repos/brands";
 import * as conversationsRepo from "@/lib/db/repos/conversations";
+import { notifyEscalation } from "@/lib/slack/notify";
 
 import { estimateCostCents, estimateCostUsd } from "./cost";
 import { critiqueReply } from "./critique";
@@ -78,6 +79,8 @@ async function markEscalated(
     targetId: conversationId,
     payload: { reason },
   });
+  // Alert a human (best-effort, never throws / never blocks the escalation).
+  void notifyEscalation(brandId, conversationId, reason).catch(() => {});
 }
 
 /**
@@ -110,6 +113,7 @@ export async function respond(brandId: string, conversationId: string): Promise<
       name: brandRow.name,
       voice: brandRow.voiceConfig,
       policies: brandRow.policies,
+      supervisedMode: brandRow.supervisedMode,
     };
     const customer: AgentCustomer = {
       id: customerRow.id,
@@ -181,6 +185,44 @@ export async function respond(brandId: string, conversationId: string): Promise<
         reply: sent ? handoff : null,
         reason,
         toolsUsed: flags.toolsUsed,
+      };
+    }
+
+    // Supervised mode (M7): hold the reply as a draft for human approval — do NOT send.
+    // (Escalation handoffs above are still sent — they are the human-takeover trigger.)
+    if (brand.supervisedMode) {
+      const draftMsg = await conversationsRepo.createDraft(brandId, {
+        conversationId,
+        body: reply,
+        model: draft.model,
+        costCents,
+      });
+      await auditRepo.record(brandId, {
+        actor: "ai",
+        action: "agent_drafted",
+        targetType: "conversation",
+        targetId: conversationId,
+        payload: {
+          draftId: draftMsg.id,
+          toolsUsed: flags.toolsUsed,
+          proposedActionId: flags.proposedActionId,
+          model: draft.model,
+          costCents,
+          costUsd,
+        },
+      });
+      trace.update({
+        output: reply,
+        metadata: { drafted: true, draftId: draftMsg.id, toolsUsed: flags.toolsUsed },
+      });
+      await trace.end();
+      return {
+        status: "drafted",
+        draftId: draftMsg.id,
+        reply,
+        proposedActionId: flags.proposedActionId,
+        toolsUsed: flags.toolsUsed,
+        model: draft.model,
       };
     }
 

@@ -29,6 +29,22 @@ export async function listVariants(brandId: string, productId: string): Promise<
     .where(and(eq(productVariants.brandId, brandId), eq(productVariants.productId, productId)));
 }
 
+/** Edit a product's agent-facing fit notes (M7). The caller re-embeds afterwards so the
+ * agent's catalog knowledge reflects the change. fitNotes is OUR metadata — sync never
+ * touches it, so this is the only writer. */
+export async function updateFitNotes(
+  brandId: string,
+  productId: string,
+  fitNotes: string | null,
+): Promise<Product | undefined> {
+  const rows = await db
+    .update(products)
+    .set({ fitNotes, updatedAt: new Date() })
+    .where(and(eq(products.brandId, brandId), eq(products.id, productId)))
+    .returning();
+  return rows[0];
+}
+
 /** Create a product together with its variants (brandId stamped on both). */
 export async function createWithVariants(
   brandId: string,

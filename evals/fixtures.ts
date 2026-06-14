@@ -31,6 +31,7 @@ export const EVAL_BRAND: AgentBrand = {
     exchange:
       "Free size and color exchanges within 30 days — we send the new item before you return the old one.",
   },
+  supervisedMode: false,
 };
 
 type FVariant = {

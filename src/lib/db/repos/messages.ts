@@ -1,4 +1,4 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, gt, isNull, or } from "drizzle-orm";
 
 import { db } from "@/lib/db/client";
 import { messages, type deliveryStatus } from "@/lib/db/schema";
@@ -6,6 +6,10 @@ import { messages, type deliveryStatus } from "@/lib/db/schema";
 export type Message = typeof messages.$inferSelect;
 
 type DeliveryStatus = (typeof deliveryStatus.enumValues)[number];
+
+/** Thread-visible messages: real sent messages (no approval status) + approved drafts
+ * that were sent. Hides pending/rejected drafts (those live in the approval bar). */
+const visible = or(isNull(messages.approvalStatus), eq(messages.approvalStatus, "approved"));
 
 /** True if a message with this provider/channel id was already recorded for the brand.
  * Used by the inbound webhook to dedupe Twilio retries (idempotent processing). */
@@ -43,6 +47,26 @@ export async function listForConversation(
     .select()
     .from(messages)
     .where(and(eq(messages.brandId, brandId), eq(messages.conversationId, conversationId)))
+    .orderBy(asc(messages.createdAt));
+}
+
+/** Thread-visible messages newer than `since` — for the console's live poll. */
+export async function listForConversationSince(
+  brandId: string,
+  conversationId: string,
+  since: Date,
+): Promise<Message[]> {
+  return db
+    .select()
+    .from(messages)
+    .where(
+      and(
+        eq(messages.brandId, brandId),
+        eq(messages.conversationId, conversationId),
+        gt(messages.createdAt, since),
+        visible,
+      ),
+    )
     .orderBy(asc(messages.createdAt));
 }
 

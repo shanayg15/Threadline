@@ -13,6 +13,7 @@ const brand: AgentBrand = {
     formality: "casual",
   },
   policies: null,
+  supervisedMode: false,
 };
 
 describe("critiqueReply — blocks false completion claims (propose-only invariant)", () => {

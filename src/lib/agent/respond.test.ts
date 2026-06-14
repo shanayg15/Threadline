@@ -6,6 +6,7 @@ vi.mock("@/lib/db/repos/conversations", () => ({
   getWithMessages: vi.fn(),
   setStatus: vi.fn(async () => ({})),
   setAssignee: vi.fn(async () => ({})),
+  createDraft: vi.fn(async () => ({ id: "draft1" })),
 }));
 vi.mock("@/lib/db/repos/brands", () => ({ getById: vi.fn() }));
 vi.mock("@/lib/db/repos/audit", () => ({ record: vi.fn(async () => ({})) }));
@@ -105,6 +106,7 @@ const BRAND = {
     shipping: "Free over $75.",
     exchange: "Free size exchanges.",
   },
+  supervisedMode: false,
 };
 
 /** The body passed to sendOutbound (4th positional arg). */
@@ -148,6 +150,25 @@ describe("Agent.respond — critique gate: a non-compliant draft is rewritten th
     // The forbidden completion claim is NEVER sent — the handoff goes out instead.
     expect(sentBody()).not.toMatch(/I've placed your order/i);
     expect(sentBody()).toMatch(/teammate/i);
+  });
+});
+
+describe("Agent.respond — supervised mode holds the reply as a draft", () => {
+  it("brand.supervisedMode → creates a draft, does NOT send, returns status 'drafted'", async () => {
+    vi.mocked(brands.getById).mockResolvedValue({ ...BRAND, supervisedMode: true } as never);
+    vi.mocked(conversations.getWithMessages).mockResolvedValue(
+      makeConvo("what is your return policy?") as never,
+    );
+
+    const out = await respond("b1", "conv1");
+
+    expect(out.status).toBe("drafted");
+    if (out.status === "drafted") expect(out.draftId).toBe("draft1");
+    expect(conversations.createDraft).toHaveBeenCalledWith(
+      "b1",
+      expect.objectContaining({ conversationId: "conv1", body: expect.stringMatching(/30 days/) }),
+    );
+    expect(sendOutbound).not.toHaveBeenCalled(); // held, not sent
   });
 });
 
