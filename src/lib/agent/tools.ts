@@ -6,6 +6,23 @@ import * as productsRepo from "@/lib/db/repos/products";
 import type { ToolContext } from "./types";
 
 /**
+ * Search results are for FINDING products/policies — never for quoting stock or price.
+ * The embedded snippet can contain a snapshot price/qty line (see embeddings/pipeline);
+ * strip anything price- or stock-shaped so the model physically cannot read a stale
+ * number out of a search hit and must call get_variant_live. Enforces the live-only
+ * invariant in code, not just in the prompt.
+ */
+function stripPriceStock(text: string): string {
+  return text
+    .replace(/\bprices?:?\s*\$?\s?\d[\d.,]*/gi, "")
+    .replace(/\$\s?\d[\d.,]*/g, "")
+    .replace(/\b\d+\s*(?:in stock|in inventory|units?|available|left|qty|quantity)\b/gi, "")
+    .replace(/\b(?:in stock|out of stock|sold out|inventory)\b/gi, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+/**
  * The agent's tools. Each tool has a plain implementation (also driven directly by
  * the keyless stub model) and an AI-SDK wrapper (driven by the real model's loop).
  *
@@ -40,7 +57,8 @@ export function createTools(ctx: ToolContext) {
         productId: h.productId,
         title: h.title,
         sourceType: h.sourceType,
-        snippet: h.snippet,
+        // Never hand stock/price back from search — the model must use get_variant_live.
+        snippet: stripPriceStock(h.snippet),
       }));
     },
 
@@ -171,7 +189,7 @@ export function createTools(ctx: ToolContext) {
     }),
     propose_action: tool({
       description:
-        "Propose a side effect (place an order, create an exchange, or send a checkout link). PROPOSE-ONLY: this records the request and asks the customer to confirm — it does NOT place, charge, or complete anything. After calling it, ask the customer to reply YES to confirm.",
+        "Propose a side effect (place an order, create an exchange, send a checkout link, or modify a subscription). PROPOSE-ONLY: this records the request and asks the customer to confirm — it does NOT place, charge, or complete anything. After calling it, ask the customer to reply YES to confirm.",
       inputSchema: z.object({
         type: z.enum([
           "place_order",

@@ -70,6 +70,7 @@ export async function runScenario(input: ScenarioInput): Promise<ScenarioResult>
     reply: critique.ok && reply.length > 0 ? reply : "[escalated to a human teammate]",
     toolsUsed: flags.toolsUsed,
     escalated,
-    proposedActionType: sink.created[0]?.type ?? null,
+    // Mirror production: a proposal surfaced only on the replied path, not when escalated.
+    proposedActionType: escalated ? null : (sink.created[0]?.type ?? null),
   };
 }

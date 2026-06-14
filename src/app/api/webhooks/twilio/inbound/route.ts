@@ -19,7 +19,7 @@ export const dynamic = "force-dynamic";
  * Twilio inbound SMS/MMS webhook. Verifies the signature, lands the inbound into a
  * conversation, and runs the DETERMINISTIC compliance gate before anything else —
  * STOP/HELP/START/consent are decided here, never by the LLM. On `proceed` the
- * message is handed to the agent (M6 — stubbed here). Returns 200 fast.
+ * message is handed to the agent asynchronously (fail-safe). Returns 200 fast.
  *
  * Fail-safe + idempotent: processing is wrapped so an unexpected error returns a
  * controlled 200 (logged) instead of a 500 — a 5xx makes Twilio RETRY, which would

@@ -68,7 +68,9 @@ one's Definition of Done is met and verified.
    pgvector embeddings, live reads. ✅
 5. **Channel layer & compliance middleware** — Twilio adapter, inbound pipeline,
    deterministic STOP/HELP/START + quiet-hours/consent/caps. ✅
-6. Agent engine, core loop & eval harness
+6. **Agent engine, core loop & eval harness** — grounded agent (live Shopify tools +
+   RAG + propose-only side effects + critique + escalation), wired into the inbound
+   webhook (fail-safe, async), Promptfoo evals. Keyless via a deterministic stub. ✅
 7. Console UI, handoff, read pages & onboarding
 8. Lifecycle engine, confirmation gates & attribution
 9. Marketing / landing site

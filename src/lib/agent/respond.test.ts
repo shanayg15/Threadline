@@ -20,6 +20,9 @@ vi.mock("@/lib/commerce", () => ({ getCommerceProvider: vi.fn() }));
 vi.mock("@/lib/channels/outbound", () => ({
   sendOutbound: vi.fn(async () => ({ sent: true, providerMessageId: "mock_x" })),
 }));
+// getAgentModel is mocked so we can inject a misbehaving model; it defaults (in
+// beforeEach) to the REAL stub so every other test exercises the real loop.
+vi.mock("./model", () => ({ getAgentModel: vi.fn(), usingRealModel: vi.fn(() => false) }));
 
 import { sendOutbound } from "@/lib/channels/outbound";
 import { getCommerceProvider } from "@/lib/commerce";
@@ -27,10 +30,20 @@ import * as brands from "@/lib/db/repos/brands";
 import * as conversations from "@/lib/db/repos/conversations";
 import * as pendingActions from "@/lib/db/repos/pendingActions";
 import { respond } from "./index";
+import { getAgentModel } from "./model";
+import { StubAgentModel } from "./model-stub";
+import type { AgentModel } from "./types";
 
 const fakeCommerce = {
   searchCatalog: vi.fn(async () => [
-    { productId: "p1", variantId: null, title: "Rain Jacket", sourceType: "catalog", snippet: "x", distance: 0.1 },
+    {
+      productId: "p1",
+      variantId: null,
+      title: "Rain Jacket",
+      sourceType: "catalog",
+      snippet: "x",
+      distance: 0.1,
+    },
   ]),
   getVariantLive: vi.fn(async () => ({
     variantId: "v1",
@@ -51,14 +64,29 @@ const fakeCommerce = {
     deliveredAt: null,
   })),
   getCustomerHistory: vi.fn(async () => [
-    { orderId: "o1", shopifyOrderId: "S1", totalCents: 9800, fulfillmentStatus: "fulfilled" as const, createdAt: new Date() },
+    {
+      orderId: "o1",
+      shopifyOrderId: "S1",
+      totalCents: 9800,
+      fulfillmentStatus: "fulfilled" as const,
+      createdAt: new Date(),
+    },
   ]),
 };
 
-function makeConvo(lastInbound: string, consentStatus: "opted_in" | "opted_out" | "unknown" = "opted_in") {
+function makeConvo(
+  lastInbound: string,
+  consentStatus: "opted_in" | "opted_out" | "unknown" = "opted_in",
+) {
   return {
     id: "conv1",
-    customer: { id: "c1", name: "Alex Doe", timezone: "America/New_York", consentStatus, phoneE164: "+15551230001" },
+    customer: {
+      id: "c1",
+      name: "Alex Doe",
+      timezone: "America/New_York",
+      consentStatus,
+      phoneE164: "+15551230001",
+    },
     messages: [{ direction: "inbound", body: lastInbound }],
   };
 }
@@ -66,8 +94,17 @@ function makeConvo(lastInbound: string, consentStatus: "opted_in" | "opted_out" 
 const BRAND = {
   id: "b1",
   name: "Demo Apparel Co",
-  voiceConfig: { agentName: "Riley", toneExemplars: [], bannedPhrases: [], formality: "casual" as const },
-  policies: { returns: "Free returns within 30 days.", shipping: "Free over $75.", exchange: "Free size exchanges." },
+  voiceConfig: {
+    agentName: "Riley",
+    toneExemplars: [],
+    bannedPhrases: [],
+    formality: "casual" as const,
+  },
+  policies: {
+    returns: "Free returns within 30 days.",
+    shipping: "Free over $75.",
+    exchange: "Free size exchanges.",
+  },
 };
 
 /** The body passed to sendOutbound (4th positional arg). */
@@ -80,6 +117,38 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(brands.getById).mockResolvedValue(BRAND as never);
   vi.mocked(getCommerceProvider).mockResolvedValue(fakeCommerce as never);
+  vi.mocked(getAgentModel).mockReturnValue(new StubAgentModel());
+});
+
+describe("Agent.respond — critique gate: a non-compliant draft is rewritten then escalated, never sent", () => {
+  it("a model that keeps claiming completion → escalates, sends the handoff, not the bad text", async () => {
+    vi.mocked(conversations.getWithMessages).mockResolvedValue(
+      makeConvo("did you place my order?") as never,
+    );
+    // A model whose draft AND rewrite both falsely claim completion.
+    const badModel: AgentModel = {
+      name: "bad",
+      run: async () => ({
+        text: "I've placed your order and charged your card!",
+        model: "bad",
+        usage: { inputTokens: 10, outputTokens: 5 },
+      }),
+      rewrite: async () => ({
+        text: "Done — I've placed your order!",
+        model: "bad",
+        usage: { inputTokens: 5, outputTokens: 3 },
+      }),
+    };
+    vi.mocked(getAgentModel).mockReturnValue(badModel);
+
+    const out = await respond("b1", "conv1");
+
+    expect(out.status).toBe("escalated");
+    expect(conversations.setStatus).toHaveBeenCalledWith("b1", "conv1", "escalated");
+    // The forbidden completion claim is NEVER sent — the handoff goes out instead.
+    expect(sentBody()).not.toMatch(/I've placed your order/i);
+    expect(sentBody()).toMatch(/teammate/i);
+  });
 });
 
 describe("Agent.respond — stock/price come from the LIVE read, not RAG", () => {

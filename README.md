@@ -13,24 +13,37 @@ compliance, human handoff, and honest lift-vs-holdout measurement.
 
 ## Status
 
-Built milestone-by-milestone toward a usable V1. **M1–M5 are complete** (foundation;
+Built milestone-by-milestone toward a usable V1. **M1–M6 are complete** (foundation;
 data model & database; auth & dashboard shell; Shopify sync & embeddings; channel
-layer & compliance middleware); M6 (agent engine & core loop) is next. See
-[`CLAUDE.md`](./CLAUDE.md) for the architecture, conventions, and the hard safety
-invariants every milestone must obey.
+layer & compliance middleware; agent engine, core loop & eval harness); M7 (console
+UI, handoff & onboarding) is next. See [`CLAUDE.md`](./CLAUDE.md) for the
+architecture, conventions, and the hard safety invariants every milestone must obey.
 
-**Keyless dev:** without Shopify/OpenAI/Twilio credentials, the app falls back to a
-fixture-backed mock commerce provider, a deterministic local embedder
-(`EMBEDDINGS_PROVIDER=local`), and a mocked SMS send (`SEND_REAL_SMS=false` — the
-default), so the whole pipeline runs end-to-end. Compliance (STOP/HELP/START, quiet
+**Keyless dev:** without Shopify/OpenAI/Anthropic/Twilio credentials, the app falls
+back to a fixture-backed mock commerce provider, a deterministic local embedder
+(`EMBEDDINGS_PROVIDER=local`), a mocked SMS send (`SEND_REAL_SMS=false` — the
+default), and a **deterministic stub agent**, so the whole pipeline — inbound →
+compliance → agent → reply — runs end-to-end. Compliance (STOP/HELP/START, quiet
 hours, consent, frequency caps) is **deterministic TypeScript, never the LLM**, with
-an exhaustive test suite. Set the real `SHOPIFY_*` / `OPENAI_API_KEY` / `TWILIO_*`
-(+ `SEND_REAL_SMS=true`) to use the live integrations.
+an exhaustive test suite. Set the real `SHOPIFY_*` / `OPENAI_API_KEY` /
+`ANTHROPIC_API_KEY` / `TWILIO_*` (+ `SEND_REAL_SMS=true`) to use the live integrations
+and the real Claude agent.
 
 ```bash
 pnpm tsx src/lib/commerce/sync-cli.ts <brandId>     # sync catalog/customers/orders
 pnpm tsx src/lib/embeddings/embed-cli.ts <brandId>  # build the pgvector knowledge base
+pnpm eval                                           # run the agent guardrail evals
 ```
+
+> **The agent.** On a cleared inbound, a grounded agent answers in the brand's voice:
+> stock/price come from **live** Shopify tool calls (never RAG), policy answers come
+> only from the brand's policies, and side effects (place order / exchange / checkout
+> link) are **propose-only** — a pending action is created and the customer is asked
+> to confirm; nothing is placed or charged (execution is a later milestone). It
+> escalates to a human on "talk to a person", confusion, or low confidence, and a
+> deterministic **critique gate** blocks any "I've placed/charged" claim or invented
+> promo before a reply is sent. The agent is fail-safe and runs off the webhook
+> asynchronously, so a model error can never break inbound handling.
 
 ## Tech stack
 
@@ -117,6 +130,7 @@ Redis answer, `503` otherwise.
 | `pnpm db:migrate` / `pnpm db:push`  | Apply migrations / push schema (M2+) |
 | `pnpm db:seed`                      | Seed the demo brand fixture (M2+)    |
 | `pnpm test` / `pnpm test:watch`     | Run Vitest                           |
+| `pnpm eval`                         | Run the agent guardrail evals (M6)   |
 | `pnpm lint` / `pnpm typecheck`      | ESLint / `tsc --noEmit`              |
 | `pnpm format` / `pnpm format:check` | Prettier write / check               |
 

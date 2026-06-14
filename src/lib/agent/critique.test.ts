@@ -26,6 +26,11 @@ describe("critiqueReply — blocks false completion claims (propose-only invaria
     "I ordered the medium for you.",
     "All set — I've set that up for you.",
     "Your exchange has been confirmed.",
+    "Ive placed your order.", // apostrophe-less SMS form
+    "Your refund has been issued.",
+    "I have created your order.",
+    "I went ahead and refunded you.",
+    "I've created a checkout link and placed it.",
   ]) {
     it(`blocks: "${reply}"`, () => {
       expect(critiqueReply(reply, brand).ok).toBe(false);
@@ -41,6 +46,8 @@ describe("critiqueReply — allows compliant propose/ask phrasing", () => {
     "Thanks for being a customer! How can I help?",
     "Reply YES and I'll get that exchange started — I won't make changes until you do.",
     "The rain jacket is in stock at $98. Want me to help you grab one?",
+    "To get your order placed, just reply YES.", // future/conditional, not a completion claim
+    "Your tracking code is AB12CD34 via UPS.", // tracking carries a code but is not a promo
   ]) {
     it(`allows: "${reply}"`, () => {
       expect(critiqueReply(reply, brand).ok).toBe(true);
@@ -49,10 +56,17 @@ describe("critiqueReply — allows compliant propose/ask phrasing", () => {
 });
 
 describe("critiqueReply — never offers an invented promo code", () => {
-  it("blocks an offered code", () => {
-    expect(critiqueReply("Use code SAVE20 for 10% off!", brand).ok).toBe(false);
-    expect(critiqueReply("Your discount code is TAKE15.", brand).ok).toBe(false);
-  });
+  for (const reply of [
+    "Use code SAVE20 for 10% off!",
+    "Your discount code is TAKE15.",
+    "Use code WELCOME for 15% off.", // all-letter code
+    "Your discount code is FREESHIP.", // all-letter code
+    "Try promo code GIFT for a treat.",
+  ]) {
+    it(`blocks: "${reply}"`, () => {
+      expect(critiqueReply(reply, brand).ok).toBe(false);
+    });
+  }
   it("allows declining a promo (no code token)", () => {
     expect(critiqueReply("We don't have a promo code running right now.", brand).ok).toBe(true);
   });

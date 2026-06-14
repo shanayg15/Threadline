@@ -4,7 +4,7 @@ import * as auditRepo from "@/lib/db/repos/audit";
 import * as brandsRepo from "@/lib/db/repos/brands";
 import * as conversationsRepo from "@/lib/db/repos/conversations";
 
-import { estimateCostCents } from "./cost";
+import { estimateCostCents, estimateCostUsd } from "./cost";
 import { critiqueReply } from "./critique";
 import { getAgentModel } from "./model";
 import { buildSystemPrompt, latestInbound, toModelMessages } from "./prompt";
@@ -23,7 +23,8 @@ export type { AgentOutcome } from "./types";
 /** Bound the whole turn (model + tools + send). The webhook never waits on this. */
 const AGENT_TIMEOUT_MS = 30_000;
 
-const HANDOFF_REPLY = "Let me get a teammate to help with this — someone will follow up here shortly.";
+const HANDOFF_REPLY =
+  "Let me get a teammate to help with this — someone will follow up here shortly.";
 
 function firstNameOf(name: string | null): string | null {
   const n = name?.trim().split(/\s+/)[0];
@@ -33,12 +34,20 @@ function firstNameOf(name: string | null): string | null {
 function sumUsage(a: ModelUsage, b: ModelUsage): ModelUsage {
   const add = (x: number | null, y: number | null) =>
     x == null && y == null ? null : (x ?? 0) + (y ?? 0);
-  return { inputTokens: add(a.inputTokens, b.inputTokens), outputTokens: add(a.outputTokens, b.outputTokens) };
+  return {
+    inputTokens: add(a.inputTokens, b.inputTokens),
+    outputTokens: add(a.outputTokens, b.outputTokens),
+  };
 }
 
 async function sendReply(
   brand: { id: string; quietHours: null; frequencyCaps: null },
-  customer: { id: string; phoneE164: string; consentStatus: "opted_in" | "opted_out" | "unknown"; timezone: string },
+  customer: {
+    id: string;
+    phoneE164: string;
+    consentStatus: "opted_in" | "opted_out" | "unknown";
+    timezone: string;
+  },
   conversationId: string,
   body: string,
   model: string,
@@ -55,7 +64,11 @@ async function sendReply(
   return result.sent;
 }
 
-async function markEscalated(brandId: string, conversationId: string, reason: string): Promise<void> {
+async function markEscalated(
+  brandId: string,
+  conversationId: string,
+  reason: string,
+): Promise<void> {
   await conversationsRepo.setStatus(brandId, conversationId, "escalated");
   await conversationsRepo.setAssignee(brandId, conversationId, { type: "human" });
   await auditRepo.record(brandId, {
@@ -109,7 +122,11 @@ export async function respond(brandId: string, conversationId: string): Promise<
     const ctx: ToolContext = { brand, customer, conversationId, commerce, flags };
     const system = buildSystemPrompt(brand, customer);
     const model = getAgentModel();
-    const trace = startAgentTrace({ brandId, conversationId, input: latestInbound(convo.messages) });
+    const trace = startAgentTrace({
+      brandId,
+      conversationId,
+      input: latestInbound(convo.messages),
+    });
 
     const input = { system, messages: history, ctx };
     let draft = await model.run(input);
@@ -128,7 +145,10 @@ export async function respond(brandId: string, conversationId: string): Promise<
       }
     }
 
+    // costCents (integer column) rounds sub-cent SMS turns to 0; costUsd keeps the
+    // precise per-message cost for the audit trail / trace.
     const costCents = estimateCostCents(draft.model, usage);
+    const costUsd = estimateCostUsd(draft.model, usage);
     const sendBrand = { id: brand.id, quietHours: null, frequencyCaps: null };
     const sendCustomer = {
       id: customerRow.id,
@@ -143,13 +163,35 @@ export async function respond(brandId: string, conversationId: string): Promise<
       const reason = flags.escalationReason ?? "empty reply";
       await markEscalated(brandId, conversationId, reason);
       const handoff = critique.ok && reply.length > 0 ? reply : HANDOFF_REPLY;
-      const sent = await sendReply(sendBrand, sendCustomer, conversationId, handoff, draft.model, costCents);
-      trace.update({ output: handoff, metadata: { escalated: true, reason, toolsUsed: flags.toolsUsed } });
+      const sent = await sendReply(
+        sendBrand,
+        sendCustomer,
+        conversationId,
+        handoff,
+        draft.model,
+        costCents,
+      );
+      trace.update({
+        output: handoff,
+        metadata: { escalated: true, reason, toolsUsed: flags.toolsUsed },
+      });
       await trace.end();
-      return { status: "escalated", reply: sent ? handoff : null, reason, toolsUsed: flags.toolsUsed };
+      return {
+        status: "escalated",
+        reply: sent ? handoff : null,
+        reason,
+        toolsUsed: flags.toolsUsed,
+      };
     }
 
-    const sent = await sendReply(sendBrand, sendCustomer, conversationId, reply, draft.model, costCents);
+    const sent = await sendReply(
+      sendBrand,
+      sendCustomer,
+      conversationId,
+      reply,
+      draft.model,
+      costCents,
+    );
     await auditRepo.record(brandId, {
       actor: "ai",
       action: "agent_replied",
@@ -160,6 +202,7 @@ export async function respond(brandId: string, conversationId: string): Promise<
         proposedActionId: flags.proposedActionId,
         model: draft.model,
         costCents,
+        costUsd,
         sent,
       },
     });
@@ -169,7 +212,7 @@ export async function respond(brandId: string, conversationId: string): Promise<
         toolsUsed: flags.toolsUsed,
         proposedActionId: flags.proposedActionId,
         model: draft.model,
-        costCents,
+        costUsd,
       },
     });
     await trace.end();
@@ -188,6 +231,7 @@ export async function respond(brandId: string, conversationId: string): Promise<
     try {
       await markEscalated(brandId, conversationId, `agent error: ${reason}`);
       await auditRepo.record(brandId, {
+        // actor "system" (not "ai") — this is an infrastructure failure, not an AI action.
         actor: "system",
         action: "agent_error",
         targetType: "conversation",
@@ -218,9 +262,11 @@ function withTimeout<T>(p: Promise<T>, ms: number, onTimeout: T): Promise<T> {
 }
 
 /**
- * Fire-and-forget entry point for the webhook: kicks off `respond` with a timeout and
- * never rejects, so the Twilio webhook can return 200 immediately and an agent failure
- * can never 500 it. (M8 moves this onto the durable BullMQ queue.)
+ * Fire-and-forget entry point for the webhook: kicks off `respond` and never rejects,
+ * so the Twilio webhook can return 200 immediately and an agent failure can never 500
+ * it. The timeout is a best-effort latency BACKSTOP for logging — it resolves the
+ * outer promise but does not cancel in-flight model/tool work (true cancellation +
+ * durable retries come with the BullMQ queue in M8).
  */
 export function respondAsync(brandId: string, conversationId: string): void {
   void withTimeout(respond(brandId, conversationId), AGENT_TIMEOUT_MS, {

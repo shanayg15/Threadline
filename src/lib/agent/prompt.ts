@@ -22,7 +22,8 @@ function voiceBlock(brand: AgentBrand): string {
 
 function policyBlock(brand: AgentBrand): string {
   const p = brand.policies;
-  if (!p) return "No brand policies are on file — if asked about returns/shipping/exchanges and you don't have the answer, escalate rather than guess.";
+  if (!p)
+    return "No brand policies are on file — if asked about returns/shipping/exchanges and you don't have the answer, escalate rather than guess.";
   const rows = [
     `- Returns: ${p.returns}`,
     `- Shipping: ${p.shipping}`,

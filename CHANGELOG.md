@@ -4,6 +4,39 @@ All notable changes to Threadline are documented here. The project is built
 milestone-by-milestone toward a usable V1; each milestone is a self-contained,
 verified increment.
 
+## M6 — Agent Engine, Core Loop & Eval Harness
+
+The agent that answers a cleared inbound — grounded in the brand's live catalog,
+order history, and policies, governed by hard rules enforced in code (not the model).
+
+### Added
+
+- **Agent core** (`src/lib/agent`): a tool layer (`search_catalog`, `list_variants`,
+  `get_variant_live`, `get_order_status`, `get_customer_history`, `propose_action`,
+  `escalate_to_human`), a brand-grounded system prompt, and a **deterministic critique
+  gate** that blocks "I've placed/charged" completion claims, invented promo codes,
+  and banned phrases before any reply is sent.
+- **Hard invariants in code**: stock/price come from the **live** `get_variant_live`
+  read (never RAG); side effects are **PROPOSE-ONLY** (a `pending` action is written,
+  nothing is placed/charged — execution is M8); the agent escalates on "talk to a
+  person"/frustration; the agentic loop is capped (`stepCountIs(6)`).
+- **Model gateway**: the real Claude model via the Vercel AI SDK when `ANTHROPIC_API_KEY`
+  is set, else a deterministic **keyless stub** that drives the same tools — so the
+  whole engine runs in dev/CI without secrets.
+- **Orchestrator** (`Agent.respond`): load → model loop → critique (one rewrite, then
+  escalate rather than send bad text) → send as an `isReply` outbound (records model +
+  cost; optional Langfuse trace). **Fail-safe** — it never throws; any error escalates
+  the thread and is audited. `respondAsync` is the timeout-bounded, fire-and-forget
+  entry the inbound webhook calls, so an agent error can never 500 the Twilio webhook.
+- **Eval harness** (`evals/`, `pnpm eval`): Promptfoo with **16 golden cases** over
+  in-memory fixtures (no DB), asserting guardrail-level properties (live price not RAG,
+  propose-only, escalation, policy-from-policy, no invented promo) plus a global
+  no-completion-claim/no-code/no-banned-phrase guard. Gates prompt changes; keyless it
+  runs the stub (CI smoke), with a key it gates the real prompt.
+- Unit + integration tests (Vitest): the critique guard (18) and the orchestrator (6)
+  — live-price-not-RAG, propose-only, escalation, no-invented-promo, fail-safe,
+  opted-out skip.
+
 ## M5 — Channel Layer & Compliance Middleware
 
 The trust-critical milestone: the Twilio SMS/MMS channel, an inbound pipeline, and a

@@ -68,7 +68,6 @@ const EnvSchema = z
     // --- LLM (Anthropic) — keys optional until the agent ships (M6) ---
     ANTHROPIC_API_KEY: optionalString,
     AGENT_MODEL: z.string().default("claude-sonnet-4-6"),
-    CRITIQUE_MODEL: z.string().default("claude-haiku-4-5-20251001"),
 
     // --- Embeddings (default OpenAI; swappable) — wired in M4 ---
     EMBEDDINGS_PROVIDER: z.enum(["openai", "voyage", "local"]).default("openai"),

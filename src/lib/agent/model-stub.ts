@@ -36,7 +36,10 @@ async function plan(message: string, ctx: ToolContext, impls: Impls): Promise<st
 
   // 1) Explicit human request / frustration → escalate.
   if (
-    has(text, /\b(human|real person|a person|representative|rep\b|agent|someone real|talk to (a|someone)|speak (to|with))\b/) ||
+    has(
+      text,
+      /\b(human|real person|a person|representative|rep\b|agent|someone real|talk to (a|someone)|speak (to|with))\b/,
+    ) ||
     has(text, /\b(this is ridiculous|useless|frustrat|angry|cancel my|complaint)\b/)
   ) {
     await impls.escalateToHuman({ reason: "customer asked for a human or is frustrated" });
@@ -60,21 +63,36 @@ async function plan(message: string, ctx: ToolContext, impls: Impls): Promise<st
     return `Let me check on that order — a teammate will follow up shortly with the details.`;
   }
 
-  // 3) Discount / promo fishing → never invent a code.
-  if (has(text, /\b(discount|promo|coupon|code|deal|sale|cheaper|price match)\b/)) {
+  // 3) Discount / promo fishing ("20% off", "promo code") → never invent a code.
+  if (
+    has(text, /\b(discount|promo|coupon|code|deal|sale|cheaper|price ?match)\b/) ||
+    has(text, /\d+\s?%/)
+  ) {
     return `We don't have a promo running right now, but I'm happy to help you find the right piece or size!`;
   }
 
+  // 3b) Billing question ("did you charge me?") → answer honestly, never claim a charge.
+  if (has(text, /\b(charge|charged|charging|bill|billed|refunded|my card|my account)\b/)) {
+    return `Nothing's been charged through this chat — I can only set things up for you to confirm. Want me to check your order or get a teammate to look into it?`;
+  }
+
   // 4) Policy questions → answer from brand policies, never invent.
-  if (has(text, /\b(return|refund|exchange policy|shipping|how long|warranty|policy)\b/) && !has(text, /\b(buy|order|exchange this|swap)\b/)) {
+  if (
+    has(text, /\b(return|refund|exchange policy|shipping|how long|warranty|policy)\b/) &&
+    !has(text, /\b(buy|order|exchange this|swap)\b/)
+  ) {
     const p = ctx.brand.policies;
-    if (p) {
-      if (has(text, /\b(return|refund)\b/)) return p.returns;
-      if (has(text, /\bship/)) return p.shipping;
-      if (has(text, /\bexchange/)) return p.exchange;
-      return p.other ?? p.returns;
-    }
-    await impls.escalateToHuman({ reason: "policy question with no policy on file" });
+    const answer = p
+      ? has(text, /\b(return|refund)\b/)
+        ? p.returns
+        : has(text, /\bship/)
+          ? p.shipping
+          : has(text, /\bexchange/)
+            ? p.exchange
+            : (p.other ?? p.returns)
+      : undefined;
+    if (answer && answer.trim()) return answer;
+    await impls.escalateToHuman({ reason: "policy question with no usable policy on file" });
     return `Good question — let me get a teammate to confirm that for you.`;
   }
 
@@ -110,7 +128,12 @@ async function plan(message: string, ctx: ToolContext, impls: Impls): Promise<st
   }
 
   // 7) Stock / size / availability / price.
-  if (has(text, /\b(in stock|stock|available|availability|do you have|carry|size|fit|color|price|cost|how much)\b/)) {
+  if (
+    has(
+      text,
+      /\b(in stock|stock|available|availability|do you have|carry|size|fit|color|price|cost|how much)\b/,
+    )
+  ) {
     const found = await findVariant(message, impls);
     if (found?.live.found && found.live.inStock) {
       return `Yes — the ${found.title} is in stock at $${found.live.priceUsd}. Want me to help you grab one?`;
