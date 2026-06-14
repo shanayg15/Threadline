@@ -1,29 +1,57 @@
-import { ArrowRight } from "lucide-react";
-import Link from "next/link";
-
 import { BrandLogo } from "@/components/brand-logo";
-import { Button } from "@/components/ui/button";
 import { getActiveBrand } from "@/lib/auth/brand";
+import * as brands from "@/lib/db/repos/brands";
+import * as integrations from "@/lib/db/repos/integrations";
+import * as playbooks from "@/lib/db/repos/playbooks";
+
+import { OnboardingWizard, type OnboardingInitial } from "./onboarding-wizard";
 
 export const metadata = { title: "Get set up — Threadline" };
+export const dynamic = "force-dynamic";
 
 export default async function OnboardingPage() {
-  await getActiveBrand(); // protected: redirects to /login when unauthenticated
+  const ctx = await getActiveBrand(); // protected: redirects to /login when unauthenticated
+  const [brand, shopify, playbookList] = await Promise.all([
+    brands.getById(ctx.brandId),
+    integrations.get(ctx.brandId, "shopify"),
+    playbooks.list(ctx.brandId),
+  ]);
+
+  const shopDomain =
+    typeof shopify?.metadata?.shopDomain === "string" ? shopify.metadata.shopDomain : null;
+  const phoneNumber =
+    typeof brand?.channelConfig?.phoneNumber === "string" ? brand.channelConfig.phoneNumber : null;
+
+  const initial: OnboardingInitial = {
+    voiceConfig: brand?.voiceConfig ?? null,
+    policies: brand?.policies ?? null,
+    quietHours: brand?.quietHours ?? null,
+    frequencyCaps: brand?.frequencyCaps ?? null,
+    // Fresh setup defaults supervised mode ON.
+    supervisedMode: brand?.supervisedMode ?? true,
+    shopifyStatus: shopify?.status ?? null,
+    shopDomain,
+    phoneNumber,
+    playbooks: playbookList.map((p) => ({
+      id: p.id,
+      key: p.key,
+      enabled: p.enabled,
+      delayMinutes: p.delayMinutes,
+    })),
+  };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center px-4 py-12 text-center">
+    <div className="flex min-h-screen flex-col items-center px-4 py-12">
       <BrandLogo className="mb-8" />
-      <h1 className="text-2xl font-semibold tracking-tight">Let&apos;s set up your concierge</h1>
-      <p className="mt-3 max-w-md text-muted-foreground">
-        The guided setup — connect Shopify, set your brand voice, paste policies, and choose
-        playbooks — arrives in M7. For now, jump straight into the console.
-      </p>
-      <Button asChild className="mt-6">
-        <Link href="/conversations">
-          Continue to console
-          <ArrowRight className="h-4 w-4" />
-        </Link>
-      </Button>
+      <div className="w-full max-w-2xl space-y-6">
+        <div className="space-y-1 text-center">
+          <h1 className="text-2xl font-semibold tracking-tight">Let&apos;s set up your concierge</h1>
+          <p className="text-sm text-muted-foreground">
+            A few quick steps and your post-purchase agent is ready to text.
+          </p>
+        </div>
+        <OnboardingWizard initial={initial} />
+      </div>
     </div>
   );
 }

@@ -39,3 +39,19 @@ export async function listForCustomer(
     .where(and(eq(consentLog.brandId, brandId), eq(consentLog.customerId, customerId)))
     .orderBy(desc(consentLog.createdAt));
 }
+
+/** Brand-wide consent log (newest first) — the Settings opt-out/consent audit view. */
+export async function listForBrand(
+  brandId: string,
+  opts: { action?: ConsentActionType; limit?: number } = {},
+): Promise<ConsentEntry[]> {
+  const where = opts.action
+    ? and(eq(consentLog.brandId, brandId), eq(consentLog.action, opts.action))
+    : eq(consentLog.brandId, brandId);
+  return db
+    .select()
+    .from(consentLog)
+    .where(where)
+    .orderBy(desc(consentLog.createdAt))
+    .limit(opts.limit ?? 100);
+}
