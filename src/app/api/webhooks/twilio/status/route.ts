@@ -39,15 +39,19 @@ export async function POST(req: NextRequest) {
   const p = parseTwilioForm(rawBody);
   const sid = p.MessageSid ?? p.SmsSid;
   const status = mapDelivery(p.MessageStatus);
-  const from = p.From; // our sending number for an outbound status callback
-  if (!sid || !status || !from) return NextResponse.json({ ok: true });
+  if (!sid || !status) return NextResponse.json({ ok: true });
 
-  const brand = await resolveBrandByNumber(from);
-  if (!brand) return NextResponse.json({ ok: true, note: "unrouted number" });
+  // Resolve the tenant by the SID we issued first: with a Messaging Service the
+  // callback's `From` is a rotated pool number that won't match a brand's configured
+  // phoneNumber. Fall back to the `From` lookup for a plain single-number setup.
+  const brandId =
+    (await messagesRepo.findBrandIdByChannelId(sid)) ??
+    (p.From ? (await resolveBrandByNumber(p.From))?.id : undefined);
+  if (!brandId) return NextResponse.json({ ok: true, note: "unrouted message" });
 
-  const updated = await messagesRepo.setDeliveryStatusByChannelId(brand.id, sid, status);
+  const updated = await messagesRepo.setDeliveryStatusByChannelId(brandId, sid, status);
   if (status === "failed" && updated) {
-    await auditRepo.record(brand.id, {
+    await auditRepo.record(brandId, {
       actor: "system",
       action: "delivery_failed",
       targetType: "message",

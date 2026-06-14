@@ -28,6 +28,26 @@ in any compliance decision.
 - Compliance-gated `sendOutbound` + a gate-bypassing `sendComplianceReply` for the
   mandated STOP/HELP/START confirmations.
 
+### Hardened (post-review)
+
+- **Idempotent inbound webhook** (migration 0006): a partial-unique index on
+  `(brand_id, channel_message_id)` plus a MessageSid dedupe short-circuit, and the
+  handler now fails safe — an unexpected error returns a logged `200` instead of a
+  `500`. A Twilio retry can no longer re-run the decision and send a **second**
+  STOP confirmation (proven: replaying a signed STOP yields one inbound, one
+  confirmation, one `opt_out` log).
+- **Seed routes end-to-end**: the demo brand's `channelConfig.phoneNumber` (+
+  `supportContact`) is seeded, so the inbound pipeline resolves a tenant against
+  seed data instead of silently dropping every message as "unrouted".
+- **Quiet hours fail safe**: a missing/invalid customer timezone falls back to a
+  default zone (was failing open, i.e. sendable at any hour).
+- **Status callback** resolves the tenant by the issued MessageSid (then falls back
+  to `From`), so a rotated Messaging Service pool number no longer drops the update.
+- Signed-URL origin is pinned to the trusted `APP_URL` rather than client-controlled
+  forwarding headers; a real carrier `send` error persists a `failed` message + audit
+  instead of vanishing. Added an outbound gate-bypass integration test and expanded
+  the quiet-hours matrix (midnight-crossing window, concrete DST `nextAllowedAt`).
+
 ## M4 — Shopify Integration, Sync & Embeddings
 
 The data plane the agent will use (M6): catalog/customer/order sync, webhooks,

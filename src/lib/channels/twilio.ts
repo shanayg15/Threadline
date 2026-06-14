@@ -12,12 +12,24 @@ export function parseTwilioForm(rawBody: string): Record<string, string> {
   return params;
 }
 
-/** The public URL Twilio signed — honor proxy/tunnel forwarding headers. */
+/**
+ * The public URL Twilio signed. Prefer the trusted, configured APP_URL origin over
+ * client-controllable forwarding headers (x-forwarded-proto/host, Host): steering those can
+ * only make a legitimate request FAIL validation (fails closed — the attacker lacks
+ * the auth token to forge a signature), but pinning the origin to APP_URL removes the
+ * dependence entirely. Path + query still come from the request as Twilio signed them.
+ */
 export function twilioRequestUrl(req: Request): string {
   const parsed = new URL(req.url);
-  const proto = req.headers.get("x-forwarded-proto") ?? parsed.protocol.replace(":", "");
-  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? parsed.host;
-  return `${proto}://${host}${parsed.pathname}${parsed.search}`;
+  let origin: string;
+  try {
+    origin = new URL(env.APP_URL).origin;
+  } catch {
+    const proto = req.headers.get("x-forwarded-proto") ?? parsed.protocol.replace(":", "");
+    const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? parsed.host;
+    origin = `${proto}://${host}`;
+  }
+  return `${origin}${parsed.pathname}${parsed.search}`;
 }
 
 function mapStatus(status: string | null | undefined): SendResult["status"] {

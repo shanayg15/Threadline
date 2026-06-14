@@ -99,11 +99,32 @@ export async function sendOutbound(
     }
   }
 
-  const result = await twilioChannel.send({
-    to: customer.phoneE164,
-    body,
-    mediaUrls: opts.mediaUrls,
-  });
+  let result: Awaited<ReturnType<typeof twilioChannel.send>>;
+  try {
+    result = await twilioChannel.send({ to: customer.phoneE164, body, mediaUrls: opts.mediaUrls });
+  } catch (err) {
+    // A real carrier error must not vanish — persist the attempt as a failed message
+    // and audit it (the mock send never throws, so dev is unaffected).
+    await conversations.appendMessage(brand.id, {
+      conversationId,
+      direction: "outbound",
+      sender: opts.sender,
+      body,
+      mediaUrls: opts.mediaUrls ?? null,
+      channelMessageId: null,
+      deliveryStatus: "failed",
+      model: opts.model ?? null,
+      costCents: opts.costCents ?? null,
+    });
+    await audit.record(brand.id, {
+      actor: "system",
+      action: "delivery_failed",
+      targetType: "conversation",
+      targetId: conversationId,
+      payload: { reason: err instanceof Error ? err.message : String(err) },
+    });
+    return { sent: false, reason: "send failed" };
+  }
 
   await conversations.appendMessage(brand.id, {
     conversationId,
