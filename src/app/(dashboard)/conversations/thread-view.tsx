@@ -108,13 +108,7 @@ function MessageBubble({ m, assigneeName }: { m: ThreadMessage; assigneeName: st
   );
 }
 
-function OrdersPanel({
-  orders,
-  customer,
-}: {
-  orders: ThreadOrder[];
-  customer: ThreadCustomer;
-}) {
+function OrdersPanel({ orders, customer }: { orders: ThreadOrder[]; customer: ThreadCustomer }) {
   const [open, setOpen] = useState(false);
   return (
     <div className="border-b bg-card">
@@ -184,7 +178,9 @@ export function ThreadView({
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const sinceRef = useRef<string>(
-    initialMessages.length > 0 ? (initialMessages[initialMessages.length - 1]?.createdAt ?? "") : "",
+    initialMessages.length > 0
+      ? (initialMessages[initialMessages.length - 1]?.createdAt ?? "")
+      : "",
   );
 
   const scrollToBottom = useCallback(() => {
@@ -199,7 +195,9 @@ export function ThreadView({
   /** Poll for new visible messages + the current open draft. */
   const poll = useCallback(
     async (full = false) => {
-      const since = full ? new Date(0).toISOString() : sinceRef.current || new Date(0).toISOString();
+      const since = full
+        ? new Date(0).toISOString()
+        : sinceRef.current || new Date(0).toISOString();
       try {
         const res = await fetch(
           `/api/conversations/${conversation.id}/messages?since=${encodeURIComponent(since)}`,
@@ -299,7 +297,7 @@ export function ThreadView({
         toast.success("Sent");
         setEditing(false);
         setDraft(null);
-        await poll();
+        await poll(true); // full refetch — the approved reply is an in-place row update
       }
     });
   }
@@ -318,7 +316,9 @@ export function ThreadView({
       <div className="flex items-start justify-between gap-3 border-b px-4 py-3">
         <div className="min-w-0">
           <h2 className="truncate text-lg font-semibold">{customer.name ?? "Unknown customer"}</h2>
-          <p className="font-mono text-xs text-muted-foreground">{formatPhone(customer.phoneE164)}</p>
+          <p className="font-mono text-xs text-muted-foreground">
+            {formatPhone(customer.phoneE164)}
+          </p>
         </div>
         <div className="flex flex-col items-end gap-1.5">
           <div className="inline-flex rounded-lg border p-0.5">
@@ -437,7 +437,13 @@ export function ThreadView({
       {/* Composer */}
       <div className="border-t p-3">
         <div className="flex items-end gap-2">
-          <Button type="button" variant="ghost" size="icon" disabled title="Attachments coming soon">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            disabled
+            title="Attachments coming soon"
+          >
             <Paperclip className="size-4" />
           </Button>
           <Textarea
@@ -454,7 +460,11 @@ export function ThreadView({
             disabled={!canMutate}
             className="max-h-32 min-h-9 resize-none"
           />
-          <Button type="button" disabled={!canMutate || isPending || !composer.trim()} onClick={onSend}>
+          <Button
+            type="button"
+            disabled={!canMutate || isPending || !composer.trim()}
+            onClick={onSend}
+          >
             <Send className="size-4" /> Send
           </Button>
           <Button

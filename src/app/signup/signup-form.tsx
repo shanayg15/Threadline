@@ -15,7 +15,7 @@ export function SignupForm() {
     <form action={formAction} className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="brandName">Brand name</Label>
-        <Input id="brandName" name="brandName" required placeholder="Acme Apparel" />
+        <Input id="brandName" name="brandName" required placeholder="Demo Apparel Co" />
       </div>
       <div className="space-y-2">
         <Label htmlFor="name">Your name</Label>

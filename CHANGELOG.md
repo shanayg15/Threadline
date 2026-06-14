@@ -4,6 +4,41 @@ All notable changes to Threadline are documented here. The project is built
 milestone-by-milestone toward a usable V1; each milestone is a self-contained,
 verified increment.
 
+## M7 — Console UI: Conversations, Handoff, Read Pages, Onboarding & Settings
+
+The placeholder console becomes the real operating surface a brand runs on.
+
+### Added
+
+- **Three-pane Conversations console**: a full-height shell (nav rail · filterable
+  inbox · thread). The inbox (`listForInbox`, one lateral-join query) shows each
+  conversation with its customer, last-message snippet, unread count, and open-draft /
+  pending-action flags, with URL-driven ACTIVITY + STATUS filters; it polls live.
+- **Thread view**: name/phone header + **AI⇄Human** toggle + absolute time, a
+  collapsible **ORDERS(n)** panel (with consent / experiment group / timezone),
+  right-aligned saturated outbound bubbles with a sender label and the **real**
+  `deliveryStatus` ("Delivered"/"Sent"/"Failed" — never a fake "Read" on SMS),
+  left-aligned inbound bubbles, MMS images, a composer (paperclip + Enter-to-send) and
+  **Pause** — all live-polled (`/api/conversations/[id]/messages?since=`).
+- **Human handoff, still compliance-gated**: the composer and draft approval route
+  through `canSendOutbound` — a human **cannot** text an opted-out number (blocked with
+  a clear reason). Assign to a human / return to AI / pause / resolve an escalation; all
+  brand-scoped, role-gated, and audited.
+- **Supervised mode**: when `brand.supervisedMode` is on, the agent's reply is **held as
+  a draft** (a `message_approval_status` column, migration 0007) instead of sent; the
+  thread shows an **Approve / Edit / Reject** bar. Approve delivers the draft in place
+  (no duplicate); Reject keeps it for audit. The M6 send step short-circuits to a draft.
+- **Slack escalation notify** (`src/lib/slack/notify.ts`) wired into the agent's
+  escalation path — best-effort, a no-op when `SLACK_WEBHOOK_URL` is unset, never throws.
+- **Read pages**: Customers (consent, experiment group, order count, last contact),
+  Orders (with the M8-populated attributed-conversation link), and Products with inline
+  **`fitNotes` editing** that re-embeds the brand so the agent's catalog knowledge stays
+  current. Stock/price columns are labelled snapshots (live figures come from the agent).
+- **Settings** (6 tabs) + a guided **onboarding wizard** sharing the same forms: brand
+  voice, policies (re-embed), integrations (validated Shopify connect → sync + embed,
+  messaging number), playbook toggles, compliance (quiet hours / caps / supervised mode
+  - suppression list + opt-out log), and team invites. Saving is role-gated and audited.
+
 ## M6 — Agent Engine, Core Loop & Eval Harness
 
 The agent that answers a cleared inbound — grounded in the brand's live catalog,

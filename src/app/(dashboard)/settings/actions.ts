@@ -92,8 +92,19 @@ export async function setChannelNumberAction(phoneNumber: string): Promise<Setti
   if (!/^\+[1-9]\d{6,15}$/.test(trimmed))
     return { ok: false, error: "Enter a valid E.164 number, e.g. +15555550100." };
   const brand = await brands.getById(ctx.brandId);
-  const channelConfig = { ...(brand?.channelConfig ?? {}), provider: "twilio", phoneNumber: trimmed };
+  const channelConfig = {
+    ...(brand?.channelConfig ?? {}),
+    provider: "twilio",
+    phoneNumber: trimmed,
+  };
   await brands.update(ctx.brandId, { channelConfig });
+  await audit.record(ctx.brandId, {
+    actor: "human",
+    actorUserId: ctx.userId,
+    action: "channel_number_updated",
+    targetType: "brand",
+    targetId: ctx.brandId,
+  });
   refreshSettings();
   return { ok: true, message: "Messaging number saved." };
 }
@@ -118,7 +129,8 @@ export async function connectShopifyAction(input: {
       webhookSecret: null,
     });
     await client.request<{ shop: { name: string } }>(`{ shop { name } }`);
-  } catch {
+  } catch (err) {
+    console.error("[shopify] connect validation failed", err instanceof Error ? err.message : err);
     return { ok: false, error: "Couldn't connect — check the shop domain and Admin API token." };
   }
 
@@ -174,11 +186,13 @@ export async function inviteUserAction(input: {
   const ctx = await getActiveBrand();
   if (ctx.role !== "owner") return { ok: false, error: "Only owners can invite teammates." };
   const email = input.email.trim().toLowerCase();
-  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { ok: false, error: "Enter a valid email." };
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))
+    return { ok: false, error: "Enter a valid email." };
   const existing = await users.getByEmail(email);
   if (existing) return { ok: false, error: "A user with that email already exists." };
 
-  // Dev: create with a random password (a real invite-email flow ships later).
+  // Create with a random password. A real invite-email flow ships later; until then the
+  // temp password is only surfaced in development — never returned in a production response.
   const tempPassword = randomBytes(9).toString("base64url");
   await users.create(ctx.brandId, {
     email,
@@ -194,5 +208,7 @@ export async function inviteUserAction(input: {
     payload: { email, role: input.role },
   });
   revalidatePath("/settings");
-  return { ok: true, message: `Invited ${email}. Temporary password: ${tempPassword}` };
+  return process.env.NODE_ENV === "production"
+    ? { ok: true, message: `Invited ${email}. They'll receive a sign-in link by email.` }
+    : { ok: true, message: `Invited ${email}. Temporary password (dev only): ${tempPassword}` };
 }

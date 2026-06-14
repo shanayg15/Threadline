@@ -152,7 +152,9 @@ export async function approveDraftAction(
   if (!canMutate(role)) return { ok: false, error: "You don't have permission to do that." };
 
   const draft = await conversations.getDraftById(brandId, draftId);
-  if (!draft || draft.approvalStatus !== "pending")
+  // Bind the draft to THIS conversation — never deliver a draft authored for one
+  // customer to another (even within the same brand).
+  if (!draft || draft.conversationId !== conversationId || draft.approvalStatus !== "pending")
     return { ok: false, error: "This draft was already handled." };
 
   const ctx = await loadSendContext(brandId, conversationId);
@@ -192,6 +194,9 @@ export async function rejectDraftAction(
 ): Promise<ActionResult> {
   const { brandId, userId, role } = await getActiveBrand();
   if (!canMutate(role)) return { ok: false, error: "You don't have permission to do that." };
+  const draft = await conversations.getDraftById(brandId, draftId);
+  if (!draft || draft.conversationId !== conversationId || draft.approvalStatus !== "pending")
+    return { ok: false, error: "This draft was already handled." };
   const rejected = await conversations.rejectDraft(brandId, draftId, userId);
   if (!rejected) return { ok: false, error: "This draft was already handled." };
   await audit.record(brandId, {

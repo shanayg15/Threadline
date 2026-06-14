@@ -230,6 +230,9 @@ export async function markDraftSent(
         ...(data.body !== undefined ? { body: data.body } : {}),
         channelMessageId: data.channelMessageId,
         deliveryStatus: data.deliveryStatus,
+        // Stamp the SEND time: the draft becomes a real message now, so it sorts after
+        // any inbound that arrived while it was pending and lands past the poll cursor.
+        createdAt: new Date(),
       })
       .where(
         and(
@@ -244,7 +247,9 @@ export async function markDraftSent(
       await tx
         .update(conversations)
         .set({ lastMessageAt: new Date() })
-        .where(and(eq(conversations.brandId, brandId), eq(conversations.id, updated.conversationId)));
+        .where(
+          and(eq(conversations.brandId, brandId), eq(conversations.id, updated.conversationId)),
+        );
     }
     return updated;
   });
@@ -343,7 +348,8 @@ export async function listForInbox(
     left join lateral (
       select m.body, m.direction, m.created_at
       from messages m
-      where m.conversation_id = c.id and m.approval_status is null
+      where m.conversation_id = c.id
+        and (m.approval_status is null or m.approval_status = 'approved')
       order by m.created_at desc limit 1
     ) lm on true
     left join lateral (
@@ -352,7 +358,8 @@ export async function listForInbox(
       where m.conversation_id = c.id and m.direction = 'inbound'
         and m.created_at > coalesce(
           (select max(mo.created_at) from messages mo
-           where mo.conversation_id = c.id and mo.direction = 'outbound' and mo.approval_status is null),
+           where mo.conversation_id = c.id and mo.direction = 'outbound'
+             and (mo.approval_status is null or mo.approval_status = 'approved')),
           to_timestamp(0)
         )
     ) ur on true

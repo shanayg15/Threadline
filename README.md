@@ -13,11 +13,20 @@ compliance, human handoff, and honest lift-vs-holdout measurement.
 
 ## Status
 
-Built milestone-by-milestone toward a usable V1. **M1–M6 are complete** (foundation;
+Built milestone-by-milestone toward a usable V1. **M1–M7 are complete** (foundation;
 data model & database; auth & dashboard shell; Shopify sync & embeddings; channel
-layer & compliance middleware; agent engine, core loop & eval harness); M7 (console
-UI, handoff & onboarding) is next. See [`CLAUDE.md`](./CLAUDE.md) for the
-architecture, conventions, and the hard safety invariants every milestone must obey.
+layer & compliance middleware; agent engine, core loop & eval harness; the operating
+console — Conversations, handoff, read pages, onboarding & settings); M8 (lifecycle
+engine, confirmation-gate execution & attribution) is next. See [`CLAUDE.md`](./CLAUDE.md)
+for the architecture, conventions, and the hard safety invariants every milestone must obey.
+
+**The console.** A three-pane **Conversations** surface — a filterable inbox, an
+iMessage-style thread (saturated outbound bubbles with the real **delivery** status —
+never a fake "read" receipt), and live polling — with human handoff (AI⇄Human, Pause,
+Resolve), a compliance-gated composer (a human can't text an opted-out number either),
+and a supervised-mode **Approve / Edit / Reject** bar on held agent drafts. Plus
+Customers, Orders, Products (with `fitNotes` editing that re-embeds), a 6-tab Settings,
+and a guided onboarding wizard — all brand-scoped from the session.
 
 **Keyless dev:** without Shopify/OpenAI/Anthropic/Twilio credentials, the app falls
 back to a fixture-backed mock commerce provider, a deterministic local embedder
