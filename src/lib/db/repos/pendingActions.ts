@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, lt, sql } from "drizzle-orm";
 
 import { db } from "@/lib/db/client";
 import { pendingActions, type pendingActionType } from "@/lib/db/schema";
@@ -7,6 +7,23 @@ import { isUniqueViolation, one } from "./_util";
 export type PendingAction = typeof pendingActions.$inferSelect;
 
 type ActionType = (typeof pendingActionType.enumValues)[number];
+
+/** Expire all pending actions past their expiresAt (the maintenance sweep). Returns count. */
+export async function expireStale(brandId: string, now: Date = new Date()): Promise<number> {
+  const rows = await db
+    .update(pendingActions)
+    .set({ status: "expired" })
+    .where(
+      and(
+        eq(pendingActions.brandId, brandId),
+        eq(pendingActions.status, "pending"),
+        sql`${pendingActions.expiresAt} is not null`,
+        lt(pendingActions.expiresAt, now),
+      ),
+    )
+    .returning({ id: pendingActions.id });
+  return rows.length;
+}
 
 /** The single open (pending) action for a conversation, if any. */
 export async function getOpen(

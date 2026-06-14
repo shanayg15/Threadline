@@ -83,7 +83,7 @@ async function scheduleForEvent(event: Event): Promise<number> {
         playbookKey: playbook.key,
         kind: "delivery_checkin",
       },
-      { delayMs: sendAt.getTime() - now.getTime(), jobId: `checkin:${event.id}:${playbook.id}` },
+      { delayMs: sendAt.getTime() - now.getTime(), jobId: `checkin__${event.id}__${playbook.id}` },
     );
     n++;
   }

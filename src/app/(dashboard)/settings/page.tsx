@@ -1,12 +1,6 @@
 import { PageContainer } from "@/components/page-container";
 import { PageHeader } from "@/components/page-header";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -119,9 +113,7 @@ export default async function SettingsPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Brand voice</CardTitle>
-                <CardDescription>
-                  How your concierge sounds in customer threads.
-                </CardDescription>
+                <CardDescription>How your concierge sounds in customer threads.</CardDescription>
               </CardHeader>
               <CardContent>
                 <VoiceForm initial={brand?.voiceConfig ?? null} />
@@ -133,9 +125,7 @@ export default async function SettingsPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Policies</CardTitle>
-                <CardDescription>
-                  The source of truth the agent answers from.
-                </CardDescription>
+                <CardDescription>The source of truth the agent answers from.</CardDescription>
               </CardHeader>
               <CardContent>
                 <PoliciesForm initial={brand?.policies ?? null} />
@@ -167,9 +157,7 @@ export default async function SettingsPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Compliance</CardTitle>
-                <CardDescription>
-                  Quiet hours, frequency caps, and supervised mode.
-                </CardDescription>
+                <CardDescription>Quiet hours, frequency caps, and supervised mode.</CardDescription>
               </CardHeader>
               <CardContent>
                 <ComplianceForm

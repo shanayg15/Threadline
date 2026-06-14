@@ -116,7 +116,10 @@ export function ConversationList() {
       if (activity !== "all") qs.set("activity", activity);
       if (status !== "all") qs.set("status", status);
       try {
-        const res = await fetch(`/api/conversations?${qs.toString()}`, { signal, cache: "no-store" });
+        const res = await fetch(`/api/conversations?${qs.toString()}`, {
+          signal,
+          cache: "no-store",
+        });
         if (!res.ok) return;
         const data = (await res.json()) as { conversations: InboxItem[] };
         setItems(data.conversations);
@@ -186,11 +189,16 @@ export function ConversationList() {
                       </span>
                     </div>
                     <p className="truncate text-sm text-muted-foreground">
-                      {c.hasOpenDraft ? "✎ Draft awaiting approval" : (c.lastMessageBody ?? "No messages yet")}
+                      {c.hasOpenDraft
+                        ? "✎ Draft awaiting approval"
+                        : (c.lastMessageBody ?? "No messages yet")}
                     </p>
                     <div className="flex items-center justify-between gap-2">
                       <AssigneeChip type={c.assigneeType} />
-                      <StatusBadge status={c.paused ? "paused" : c.status} className="text-[0.7rem]" />
+                      <StatusBadge
+                        status={c.paused ? "paused" : c.status}
+                        className="text-[0.7rem]"
+                      />
                     </div>
                   </Link>
                 </li>

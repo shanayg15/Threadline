@@ -45,7 +45,9 @@ export default async function OnboardingPage() {
       <BrandLogo className="mb-8" />
       <div className="w-full max-w-2xl space-y-6">
         <div className="space-y-1 text-center">
-          <h1 className="text-2xl font-semibold tracking-tight">Let&apos;s set up your concierge</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            Let&apos;s set up your concierge
+          </h1>
           <p className="text-sm text-muted-foreground">
             A few quick steps and your post-purchase agent is ready to text.
           </p>

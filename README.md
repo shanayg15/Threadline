@@ -13,12 +13,25 @@ compliance, human handoff, and honest lift-vs-holdout measurement.
 
 ## Status
 
-Built milestone-by-milestone toward a usable V1. **M1–M7 are complete** (foundation;
-data model & database; auth & dashboard shell; Shopify sync & embeddings; channel
-layer & compliance middleware; agent engine, core loop & eval harness; the operating
-console — Conversations, handoff, read pages, onboarding & settings); M8 (lifecycle
-engine, confirmation-gate execution & attribution) is next. See [`CLAUDE.md`](./CLAUDE.md)
-for the architecture, conventions, and the hard safety invariants every milestone must obey.
+Built milestone-by-milestone, and **the V1 is complete (M1–M8)**: foundation; data model
+& database; auth & dashboard shell; Shopify sync & embeddings; channel layer & compliance
+middleware; agent engine, core loop & eval harness; the operating console (Conversations,
+handoff, read pages, onboarding & settings); and the lifecycle engine, confirmation gates
+& attribution. The remaining milestone is the public marketing site (M9). See
+[`CLAUDE.md`](./CLAUDE.md) for the architecture, conventions, and the hard safety
+invariants every milestone obeys.
+
+**The proactive engine + confirmation gate (M8).** A separate worker (`pnpm worker`,
+BullMQ on Redis) runs the lifecycle: a delivered order (real tracking or a conservative
+heuristic) → a post-delivery **check-in**, sent only to opted-in **treatment** customers
+at a quiet-hours-respecting time — the **control** group is a true holdout and is never
+messaged (checked at scheduling _and_ at send). When the agent proposes a side effect, the
+confirmation gate executes it **only** on an unambiguous "yes" — money flows through a
+Shopify **checkout link the customer pays** (never a card charge); "yes but in navy"
+re-proposes and "maybe" asks to clarify. Orders are attributed back to the conversation
+that drove them, feeding an honest, **assist-based** Analytics page (with treatment/holdout
+counts — incremental lift is a later phase). Every send and execution is audited; jobs are
+idempotent.
 
 **The console.** A three-pane **Conversations** surface — a filterable inbox, an
 iMessage-style thread (saturated outbound bubbles with the real **delivery** status —
@@ -47,12 +60,13 @@ pnpm eval                                           # run the agent guardrail ev
 > **The agent.** On a cleared inbound, a grounded agent answers in the brand's voice:
 > stock/price come from **live** Shopify tool calls (never RAG), policy answers come
 > only from the brand's policies, and side effects (place order / exchange / checkout
-> link) are **propose-only** — a pending action is created and the customer is asked
-> to confirm; nothing is placed or charged (execution is a later milestone). It
-> escalates to a human on "talk to a person", confusion, or low confidence, and a
-> deterministic **critique gate** blocks any "I've placed/charged" claim or invented
-> promo before a reply is sent. The agent is fail-safe and runs off the webhook
-> asynchronously, so a model error can never break inbound handling.
+> link) are **propose-only** — a pending action is created and the customer is asked to
+> confirm. On an unambiguous "yes" the confirmation gate executes it via a customer-paid
+> Shopify checkout link (never a card charge); on "maybe"/"yes but…" it asks or
+> re-proposes. It escalates to a human on "talk to a person", confusion, or low
+> confidence, and a deterministic **critique gate** blocks any "I've placed/charged"
+> claim or invented promo before a reply is sent. The agent is fail-safe and runs off
+> the webhook asynchronously, so a model error can never break inbound handling.
 
 ## Tech stack
 

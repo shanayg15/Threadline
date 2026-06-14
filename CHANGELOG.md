@@ -4,6 +4,39 @@ All notable changes to Threadline are documented here. The project is built
 milestone-by-milestone toward a usable V1; each milestone is a self-contained,
 verified increment.
 
+## M8 — Lifecycle Engine, Confirmation Gates, Attribution & Analytics
+
+The product becomes proactive and safe to transact — **the usable V1**.
+
+### Added
+
+- **BullMQ lifecycle engine** (`pnpm worker`): a `lifecycle` sweep drains `events` →
+  matches enabled `playbooks` → gates on consent + **holdout** → enqueues a
+  quiet-hours-respecting delayed `outbound` job; an `outbound` processor re-checks
+  consent/holdout/paused/compliance at send, composes + critiques the message, and sends
+  it (or holds a supervised draft) + schedules one capped, self-cancelling no-response
+  reminder; a `maintenance` sweep marks deliveries (a conservative **heuristic** — never
+  before arrival) → `order_delivered` events and expires stale actions; a nightly cron
+  re-syncs + re-embeds connected brands. Jobs are idempotent (deterministic jobIds +
+  an atomic event claim).
+- **Delivery check-in** — the first real proactive flow, on SMS via the mock gate in dev.
+- **Confirmation gate** (`src/lib/agent/gate.ts`): a proposed action executes **only** on
+  an unambiguous YES — a deterministic CONFIRM/DECLINE/MODIFY/UNCLEAR classifier where a
+  negation next to a "yes" never confirms; "yes but in navy" re-proposes, "maybe" asks.
+  Execution builds a **customer-paid Shopify checkout link** (cart permalink) — **no card
+  is ever charged**; `modify_subscription` and unresolvable cases escalate honestly.
+  Atomically claimed (no double-execute), time-expiry-enforced, re-critiqued, audited.
+- **Holdout + attribution** (`src/lib/measure`): a stable hash assigns each customer a
+  treatment/control arm (control is never sent proactive messages); a per-conversation
+  attribution code rides the checkout link, and the `orders/create` webhook matches it
+  back to the conversation, writing an `attributions` row + `orders.attributedConversationId`
+  (idempotent). Migration 0008 adds `conversations.attributionCode`.
+- **Tracking** (`src/lib/tracking`): a `TrackingProvider` with a heuristic default
+  (delivered N days after shipping) + an EasyPost adapter slot.
+- **Analytics page**: brand-scoped volume/engagement/attributed-orders/cost + treatment
+  vs holdout counts — **honest and assist-based for V1** (no inflated lift claims;
+  incremental lift needs the holdout comparison, a later phase).
+
 ## M7 — Console UI: Conversations, Handoff, Read Pages, Onboarding & Settings
 
 The placeholder console becomes the real operating surface a brand runs on.

@@ -94,7 +94,9 @@ export function VoiceForm({
           value={toneExemplars}
           onChange={(e) => setToneExemplars(e.target.value)}
           rows={4}
-          placeholder={"One example per line\nWarm but to the point — like texting a friend who works here."}
+          placeholder={
+            "One example per line\nWarm but to the point — like texting a friend who works here."
+          }
         />
         <p className="text-xs text-muted-foreground">
           Short snippets that capture how your brand sounds. One per line.
@@ -110,9 +112,7 @@ export function VoiceForm({
           rows={3}
           placeholder={"One phrase per line the agent must never use"}
         />
-        <p className="text-xs text-muted-foreground">
-          Wording the agent must avoid. One per line.
-        </p>
+        <p className="text-xs text-muted-foreground">Wording the agent must avoid. One per line.</p>
       </div>
 
       <div className="space-y-2">

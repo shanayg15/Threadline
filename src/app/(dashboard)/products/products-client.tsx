@@ -61,9 +61,7 @@ function optionsSummary(variants: VariantRow[]): string {
 
 /** Min/max priceCents across variants, formatted as a range (or single value). */
 function priceRange(variants: VariantRow[]): string {
-  const prices = variants
-    .map((v) => v.priceCents)
-    .filter((c): c is number => c != null);
+  const prices = variants.map((v) => v.priceCents).filter((c): c is number => c != null);
   if (prices.length === 0) return "—";
   const min = Math.min(...prices);
   const max = Math.max(...prices);
@@ -74,9 +72,7 @@ function priceRange(variants: VariantRow[]): string {
 
 /** Lowest priceCents, for sorting the synced-snapshot column. */
 function minPrice(variants: VariantRow[]): number {
-  const prices = variants
-    .map((v) => v.priceCents)
-    .filter((c): c is number => c != null);
+  const prices = variants.map((v) => v.priceCents).filter((c): c is number => c != null);
   return prices.length === 0 ? Number.POSITIVE_INFINITY : Math.min(...prices);
 }
 
@@ -85,13 +81,7 @@ function totalStock(variants: VariantRow[]): number {
   return variants.reduce((sum, v) => sum + (v.inventoryQty ?? 0), 0);
 }
 
-export function ProductsClient({
-  data,
-  canEdit,
-}: {
-  data: ProductRow[];
-  canEdit: boolean;
-}) {
+export function ProductsClient({ data, canEdit }: { data: ProductRow[]; canEdit: boolean }) {
   const [editing, setEditing] = useState<ProductRow | null>(null);
   const [draft, setDraft] = useState("");
   const [isPending, startTransition] = useTransition();
@@ -152,7 +142,7 @@ export function ProductsClient({
       cell: (row) => (
         <div className="space-y-0.5">
           <div className="tabular-nums">{priceRange(row.variants)}</div>
-          <div className="text-xs text-muted-foreground tabular-nums">
+          <div className="text-xs tabular-nums text-muted-foreground">
             {totalStock(row.variants)} in stock
           </div>
         </div>
@@ -175,9 +165,7 @@ export function ProductsClient({
       header: "Updated",
       sortValue: (row) => row.updatedAt,
       cell: (row) => (
-        <span className="text-sm text-muted-foreground">
-          {formatRelativeTime(row.updatedAt)}
-        </span>
+        <span className="text-sm text-muted-foreground">{formatRelativeTime(row.updatedAt)}</span>
       ),
     },
     {
@@ -185,12 +173,7 @@ export function ProductsClient({
       header: "",
       className: "text-right",
       cell: (row) => (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => openEditor(row)}
-          disabled={!canEdit}
-        >
+        <Button variant="outline" size="sm" onClick={() => openEditor(row)} disabled={!canEdit}>
           <Pencil className="h-3.5 w-3.5" />
           Fit notes
         </Button>
@@ -201,9 +184,9 @@ export function ProductsClient({
   return (
     <>
       <p className="mb-3 text-sm text-muted-foreground">
-        Fit notes are your private guidance on sizing, materials, and care. The
-        concierge reads them to ground its answers — price and stock shown here are
-        the last synced snapshot, while the agent always quotes live Shopify figures.
+        Fit notes are your private guidance on sizing, materials, and care. The concierge reads them
+        to ground its answers — price and stock shown here are the last synced snapshot, while the
+        agent always quotes live Shopify figures.
       </p>
 
       <DataTable
@@ -218,8 +201,8 @@ export function ProductsClient({
           <DialogHeader>
             <DialogTitle>Fit notes — {editing?.title}</DialogTitle>
             <DialogDescription>
-              These feed the agent&apos;s answers. Note how this product runs (sizing,
-              fabric, care) so the concierge replies the way you would.
+              These feed the agent&apos;s answers. Note how this product runs (sizing, fabric, care)
+              so the concierge replies the way you would.
             </DialogDescription>
           </DialogHeader>
           <Textarea

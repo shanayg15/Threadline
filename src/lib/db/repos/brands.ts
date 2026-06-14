@@ -18,6 +18,11 @@ export async function getBySlug(slug: string): Promise<Brand | undefined> {
   return rows[0];
 }
 
+/** All brands — the worker's sweeps iterate every tenant. */
+export async function listAll(): Promise<Brand[]> {
+  return db.select().from(brands);
+}
+
 export async function create(data: NewBrand): Promise<Brand> {
   return one(await db.insert(brands).values(data).returning());
 }

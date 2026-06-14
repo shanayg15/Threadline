@@ -1,4 +1,4 @@
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, sql } from "drizzle-orm";
 
 import { db } from "@/lib/db/client";
 import {
@@ -51,19 +51,6 @@ export async function list(brandId: string): Promise<Customer[]> {
 }
 
 /** Customers matching a consent / experiment-group cohort (M8 scheduling + analytics). */
-export async function listEligible(
-  brandId: string,
-  filters: { consentStatus?: ConsentStatus; experimentGroup?: ExperimentGroup },
-): Promise<Customer[]> {
-  const conds = [eq(customers.brandId, brandId)];
-  if (filters.consentStatus) conds.push(eq(customers.consentStatus, filters.consentStatus));
-  if (filters.experimentGroup) conds.push(eq(customers.experimentGroup, filters.experimentGroup));
-  return db
-    .select()
-    .from(customers)
-    .where(and(...conds));
-}
-
 /** Customers + order count, last contact time, and a conversation to link to (Customers
  * read page). A few aggregate queries assembled in JS — no N+1. */
 export async function listWithStats(brandId: string): Promise<CustomerWithStats[]> {
@@ -148,6 +135,8 @@ export async function setConsent(
   return rows[0];
 }
 
+/** Assign the experiment group — FIRST WRITER WINS (only when unassigned), so the holdout
+ * arm is stable and two concurrent assigners can't flip it. Returns the (now-)assigned row. */
 export async function assignExperimentGroup(
   brandId: string,
   customerId: string,
@@ -156,7 +145,13 @@ export async function assignExperimentGroup(
   const rows = await db
     .update(customers)
     .set({ experimentGroup: group })
-    .where(and(eq(customers.brandId, brandId), eq(customers.id, customerId)))
+    .where(
+      and(
+        eq(customers.brandId, brandId),
+        eq(customers.id, customerId),
+        isNull(customers.experimentGroup),
+      ),
+    )
     .returning();
-  return rows[0];
+  return rows[0] ?? (await getById(brandId, customerId));
 }

@@ -32,10 +32,7 @@ export default async function ProductsPage() {
 
   return (
     <PageContainer>
-      <PageHeader
-        title="Products"
-        description="Edit fit notes to sharpen the agent's answers."
-      />
+      <PageHeader title="Products" description="Edit fit notes to sharpen the agent's answers." />
       <div className="mt-6">
         <ProductsClient data={data} canEdit={role !== "viewer"} />
       </div>

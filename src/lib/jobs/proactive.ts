@@ -1,4 +1,5 @@
 import { sendOrHold } from "@/lib/channels/outbound";
+import { canSendOutbound } from "@/lib/compliance";
 import { critiqueReply } from "@/lib/agent/critique";
 import type { AgentBrand } from "@/lib/agent/types";
 import * as auditRepo from "@/lib/db/repos/audit";
@@ -30,11 +31,19 @@ export function composeProactiveMessage(brand: Brand, customer: Customer, kind: 
   return `Hi${name}! Your order should have arrived — how's everything looking? If anything isn't quite right, just reply here and ${agent} will help sort it out.`;
 }
 
-/** Whether the customer has replied since the most recent outbound (engagement check). */
-function repliedSinceLastOutbound(messages: { direction: string; createdAt: Date }[]): boolean {
-  let lastOutbound = new Date(0);
-  for (const m of messages) if (m.direction === "outbound" && m.createdAt > lastOutbound) lastOutbound = m.createdAt;
-  return messages.some((m) => m.direction === "inbound" && m.createdAt > lastOutbound);
+/** Whether the customer replied since the most recent DELIVERED outbound. A held/rejected
+ * supervised draft was never sent, so it doesn't count as the last outbound (otherwise a
+ * reminder could fire about a check-in the customer never actually received). */
+function repliedSinceLastDelivered(
+  messages: { direction: string; createdAt: Date; approvalStatus: string | null }[],
+): boolean {
+  let last = new Date(0);
+  for (const m of messages) {
+    const delivered =
+      m.direction === "outbound" && (m.approvalStatus == null || m.approvalStatus === "approved");
+    if (delivered && m.createdAt > last) last = m.createdAt;
+  }
+  return messages.some((m) => m.direction === "inbound" && m.createdAt > last);
 }
 
 /**
@@ -61,13 +70,14 @@ export async function runOutboundJob(data: OutboundJobData): Promise<void> {
 
   // Re-check the gates at send time.
   if (customer.consentStatus !== "opted_in") return void (await skip("not opted in"));
-  if (customer.experimentGroup === "control") return void (await skip("holdout")); // holdout at send
+  // Holdout at send: only treatment is ever messaged (mirrors the scheduling check exactly).
+  if (customer.experimentGroup !== "treatment") return void (await skip("holdout"));
   const conversation = await conversationsRepo.getById(data.brandId, data.conversationId);
   if (!conversation) return;
   if (conversation.paused) return void (await skip("conversation paused"));
 
   const messages = await messagesRepo.listForConversation(data.brandId, data.conversationId);
-  if (data.kind === "no_response_reminder" && repliedSinceLastOutbound(messages)) {
+  if (data.kind === "no_response_reminder" && repliedSinceLastDelivered(messages)) {
     return void (await skip("customer already engaged — reminder cancelled"));
   }
 
@@ -105,11 +115,23 @@ export async function runOutboundJob(data: OutboundJobData): Promise<void> {
     payload: { kind: data.kind, playbook: data.playbookKey },
   });
 
-  // Schedule a SINGLE capped no-response reminder after the check-in (not after a reminder).
-  if (data.kind === "delivery_checkin") {
+  // Schedule a SINGLE capped no-response reminder — only when the check-in actually went out
+  // (a held supervised draft schedules none), at a quiet-hours-respecting time.
+  if (data.kind === "delivery_checkin" && res.outcome === "sent") {
+    const now = new Date();
+    let reminderAt = new Date(now.getTime() + REMINDER_DELAY_MS);
+    const decision = canSendOutbound({
+      brand: { quietHours: brand.quietHours, frequencyCaps: brand.frequencyCaps },
+      customer: { consentStatus: customer.consentStatus, timezone: customer.timezone },
+      now: reminderAt,
+      isReply: false,
+    });
+    if (!decision.allowed && decision.nextAllowedAt && decision.reason.includes("quiet")) {
+      reminderAt = decision.nextAllowedAt;
+    }
     await enqueueOutbound(
       { ...data, kind: "no_response_reminder" },
-      { delayMs: REMINDER_DELAY_MS, jobId: `reminder:${data.conversationId}` },
+      { delayMs: reminderAt.getTime() - now.getTime(), jobId: `reminder__${data.conversationId}` },
     );
   }
 }

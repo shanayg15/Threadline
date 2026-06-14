@@ -5,13 +5,7 @@ import { toast } from "sonner";
 
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -122,7 +116,11 @@ export function IntegrationsPanel({
               </div>
               <div className="flex items-center gap-2">
                 <Button type="submit" disabled={shopifyPending}>
-                  {shopifyPending ? "Connecting…" : connected ? "Reconnect Shopify" : "Connect Shopify"}
+                  {shopifyPending
+                    ? "Connecting…"
+                    : connected
+                      ? "Reconnect Shopify"
+                      : "Connect Shopify"}
                 </Button>
                 {connected ? (
                   <Button

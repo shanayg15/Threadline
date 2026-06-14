@@ -33,7 +33,8 @@ async function main() {
       QUEUE.lifecycle,
       async () => {
         const r = await runLifecycleSweep();
-        if (r.scheduled > 0) console.log(`[worker] lifecycle: ${r.scheduled} scheduled from ${r.events} events`);
+        if (r.scheduled > 0)
+          console.log(`[worker] lifecycle: ${r.scheduled} scheduled from ${r.events} events`);
       },
       { connection: bullConnection },
     ),
@@ -61,16 +62,37 @@ async function main() {
   ];
 
   for (const w of workers) {
-    w.on("failed", (job, err) => console.error(`[worker] ${job?.queueName} job failed:`, err.message));
+    w.on("failed", (job, err) =>
+      console.error(`[worker] ${job?.queueName} job failed:`, err.message),
+    );
   }
 
   // Register the repeatable (cron) jobs. The fixed jobId means re-running the worker
   // doesn't pile up duplicate schedulers.
-  await lifecycleQueue().add("sweep", {}, { repeat: { every: LIFECYCLE_EVERY_MS }, jobId: "lifecycle-sweep" });
-  await maintenanceQueue().add("maintain", {}, { repeat: { every: MAINTENANCE_EVERY_MS }, jobId: "maintenance-sweep" });
-  await maintenanceQueue().add("nightly", {}, { repeat: { pattern: "0 3 * * *" }, jobId: "nightly-resync" });
+  await lifecycleQueue().add(
+    "sweep",
+    {},
+    { repeat: { every: LIFECYCLE_EVERY_MS }, jobId: "lifecycle-sweep" },
+  );
+  await maintenanceQueue().add(
+    "maintain",
+    {},
+    { repeat: { every: MAINTENANCE_EVERY_MS }, jobId: "maintenance-sweep" },
+  );
+  await maintenanceQueue().add(
+    "nightly",
+    {},
+    { repeat: { pattern: "0 3 * * *" }, jobId: "nightly-resync" },
+  );
 
-  console.log(`[worker] up — lifecycle + outbound + maintenance running (SEND_REAL_SMS=${env.SEND_REAL_SMS})`);
+  // Run the sweeps once on boot (maintenance first so freshly-delivered orders are picked
+  // up by the lifecycle sweep that follows) — don't wait a full interval after a restart.
+  await maintenanceQueue().add("maintain", {}, { removeOnComplete: true });
+  await lifecycleQueue().add("sweep", {}, { delay: 3000, removeOnComplete: true });
+
+  console.log(
+    `[worker] up — lifecycle + outbound + maintenance running (SEND_REAL_SMS=${env.SEND_REAL_SMS})`,
+  );
 
   const shutdown = async (signal: NodeJS.Signals) => {
     console.log(`[worker] received ${signal}, shutting down`);

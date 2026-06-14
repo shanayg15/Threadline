@@ -132,11 +132,7 @@ export function ComplianceForm({
             Supervised mode queues every outbound message for a teammate to approve before it sends.
           </p>
         </div>
-        <Switch
-          id="supervised-mode"
-          checked={supervisedMode}
-          onCheckedChange={setSupervisedMode}
-        />
+        <Switch id="supervised-mode" checked={supervisedMode} onCheckedChange={setSupervisedMode} />
       </div>
 
       <Button type="submit" disabled={isPending}>

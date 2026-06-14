@@ -27,16 +27,23 @@ const DECLINE = /^\s*(no|nope|nah|cancel|don'?t|do not|never ?mind|not now|stop 
 const CONFIRM_START =
   /^\s*(yes|yeah|yep|yup|ya|sure|ok|okay|confirm|confirmed|do it|place it|sounds good|go ahead|please do|let'?s do it|absolutely|👍)\b/i;
 const CONFIRM_ANY = /\b(confirm|place the order|go ahead and|do it)\b/i;
+// A negation / cancel / hesitation token ANYWHERE means "do not execute" — even next to a
+// "yes" ("yes cancel it", "absolutely not", "ok wait", "sure what's the catch").
+const NEGATION =
+  /\b(not|cancel|cancell?ed|don'?t|do not|stop|nope|never|hold off|wait|catch|nvm)\b/i;
 
-/** Deterministic affirmative classifier. MODIFY is checked first so "yes but in navy"
- * re-confirms instead of executing; a question or vague reply is UNCLEAR (never executes). */
+/** Deterministic affirmative classifier. MODIFY is checked first ("yes but in navy" →
+ * re-confirm); a negation alongside a yes is contradictory → UNCLEAR (never execute); a
+ * bare confirm token → CONFIRM; anything vague → UNCLEAR. A false-confirm is the dangerous
+ * direction, so ambiguity always resolves AWAY from executing. */
 export function classifyAffirmative(text: string): AffirmativeClass {
   const t = (text ?? "").trim();
   if (!t) return "unclear";
   if (MODIFY.test(t)) return "modify";
   if (DECLINE.test(t)) return "decline";
-  if (CONFIRM_START.test(t) || CONFIRM_ANY.test(t)) return "confirm";
-  return "unclear";
+  const hasConfirm = CONFIRM_START.test(t) || CONFIRM_ANY.test(t);
+  if (NEGATION.test(t)) return hasConfirm ? "unclear" : "decline";
+  return hasConfirm ? "confirm" : "unclear";
 }
 
 type Convo = NonNullable<Awaited<ReturnType<typeof conversationsRepo.getWithMessages>>>;
@@ -59,6 +66,13 @@ export async function runConfirmationGate(
   const open = await pendingActionsRepo.getOpen(brandRow.id, convo.id);
   if (!open || !convo.customer) return { handled: false };
 
+  // A time-expired proposal must NOT be confirmable (stock/price may have changed since)
+  // even if the maintenance sweep hasn't run yet. Expire it and fall through to re-propose.
+  if (open.expiresAt && open.expiresAt < new Date()) {
+    await pendingActionsRepo.expire(brandRow.id, open.id);
+    return { handled: false };
+  }
+
   const cls = classifyAffirmative(latestInbound(convo.messages));
   const brand: AgentBrand = {
     id: brandRow.id,
@@ -79,12 +93,17 @@ export async function runConfirmationGate(
     timezone: convo.customer.timezone,
   };
 
+  // The gate's replies are deterministic, safe responses to an EXPLICIT customer action
+  // (their yes/no), so they SEND directly even in supervised mode — the human-in-the-loop
+  // decision was the propose step, and holding would (a) lose the message to the one-open-
+  // draft constraint when a proposal draft is still pending and (b) leave the customer
+  // hanging after they confirmed. Compliance (opt-out) is still enforced by sendOutbound.
   async function reply(action: "declined" | "unclear" | "escalated", body: string) {
     const safe = critiqueReply(body, brand).ok ? body : "Let me get a teammate to help with this.";
     const res = await sendOrHold(sendBrand, sendCustomer, convo.id, safe, {
       sender: "ai",
       isReply: true,
-      supervised: brand.supervisedMode,
+      supervised: false,
     });
     return gateOutcome(action, open!.id, res.outcome === "sent", safe);
   }
@@ -131,23 +150,33 @@ export async function runConfirmationGate(
     });
     return {
       handled: true,
-      outcome: await reply("declined", "No problem — I won't set that up. Anything else I can help with?"),
+      outcome: await reply(
+        "declined",
+        "No problem — I won't set that up. Anything else I can help with?",
+      ),
     };
   }
 
   // cls === "confirm" → execute.
-  return { handled: true, outcome: await execute(brandRow, brand, sendBrand, sendCustomer, convo, open) };
+  return {
+    handled: true,
+    outcome: await execute(brandRow, brand, sendBrand, sendCustomer, convo, open),
+  };
 }
 
 async function escalate(
   brandRow: Brand,
   sendBrand: { id: string; quietHours: Brand["quietHours"]; frequencyCaps: Brand["frequencyCaps"] },
-  sendCustomer: { id: string; phoneE164: string; consentStatus: "opted_in" | "opted_out" | "unknown"; timezone: string },
+  sendCustomer: {
+    id: string;
+    phoneE164: string;
+    consentStatus: "opted_in" | "opted_out" | "unknown";
+    timezone: string;
+  },
   convo: Convo,
   open: { id: string },
   reason: string,
   body: string,
-  supervised: boolean,
 ): Promise<AgentOutcome> {
   await conversationsRepo.setStatus(brandRow.id, convo.id, "escalated");
   await conversationsRepo.setAssignee(brandRow.id, convo.id, { type: "human" });
@@ -158,10 +187,11 @@ async function escalate(
     targetId: open.id,
     payload: { conversationId: convo.id, reason },
   });
+  // Escalation acks send directly (see reply() — explicit customer action).
   const res = await sendOrHold(sendBrand, sendCustomer, convo.id, body, {
     sender: "ai",
     isReply: true,
-    supervised,
+    supervised: false,
   });
   return gateOutcome("escalated", open.id, res.outcome === "sent", body);
 }
@@ -170,14 +200,19 @@ async function execute(
   brandRow: Brand,
   brand: AgentBrand,
   sendBrand: { id: string; quietHours: Brand["quietHours"]; frequencyCaps: Brand["frequencyCaps"] },
-  sendCustomer: { id: string; phoneE164: string; consentStatus: "opted_in" | "opted_out" | "unknown"; timezone: string },
+  sendCustomer: {
+    id: string;
+    phoneE164: string;
+    consentStatus: "opted_in" | "opted_out" | "unknown";
+    timezone: string;
+  },
   convo: Convo,
   open: NonNullable<Awaited<ReturnType<typeof pendingActionsRepo.getOpen>>>,
 ): Promise<AgentOutcome> {
-  const supervised = brandRow.supervisedMode;
   const payload = open.payload ?? {};
   const variantId = typeof payload.variantId === "string" ? payload.variantId : null;
-  const quantity = typeof payload.quantity === "number" && payload.quantity > 0 ? payload.quantity : 1;
+  const quantity =
+    typeof payload.quantity === "number" && payload.quantity > 0 ? payload.quantity : 1;
 
   // modify_subscription is out of V1 — escalate honestly rather than fake success.
   if (open.type === "modify_subscription") {
@@ -190,7 +225,6 @@ async function execute(
       open,
       "subscription change out of V1",
       "Thanks for confirming — I'll have a teammate set up that subscription change and follow up here.",
-      supervised,
     );
   }
 
@@ -205,9 +239,14 @@ async function execute(
       open,
       "no variant to check out",
       "Thanks for confirming — a teammate will get that finalized and follow up here shortly.",
-      supervised,
     );
   }
+
+  // CLAIM the action atomically FIRST (confirm guards on status='pending'). A duplicate /
+  // concurrent "yes" loses the claim and bails — so a checkout link is built and sent at
+  // most once, never twice.
+  const claimed = await pendingActionsRepo.confirm(brandRow.id, open.id);
+  if (!claimed) return gateOutcome("executed", open.id, false, null);
 
   // Stamp a per-conversation attribution code on the link so the resulting order can be
   // matched back to this thread (M8 attribution). No card is charged — customer pays.
@@ -217,20 +256,20 @@ async function execute(
   let url: string;
   try {
     const commerce = await getCommerceProvider(brandRow.id);
-    ({ url } = await commerce.createCheckoutLink(
-      brandRow.id,
-      [{ variantId, quantity }],
-      { discountCode: code },
-    ));
+    ({ url } = await commerce.createCheckoutLink(brandRow.id, [{ variantId, quantity }], {
+      discountCode: code,
+    }));
   } catch (err) {
     await auditRepo.record(brandRow.id, {
       actor: "system",
       action: "action_failed",
       targetType: "pending_action",
       targetId: open.id,
-      payload: { conversationId: convo.id, error: err instanceof Error ? err.message : String(err) },
+      payload: {
+        conversationId: convo.id,
+        error: err instanceof Error ? err.message : String(err),
+      },
     });
-    await pendingActionsRepo.cancel(brandRow.id, open.id);
     return escalate(
       brandRow,
       sendBrand,
@@ -239,11 +278,9 @@ async function execute(
       open,
       "checkout link failed",
       "I hit a snag setting that up — a teammate will sort it out and follow up here.",
-      supervised,
     );
   }
 
-  await pendingActionsRepo.confirm(brandRow.id, open.id);
   await auditRepo.record(brandRow.id, {
     actor: "ai",
     action: "action_executed",
@@ -258,7 +295,7 @@ async function execute(
   const res = await sendOrHold(sendBrand, sendCustomer, convo.id, safe, {
     sender: "ai",
     isReply: true,
-    supervised,
+    supervised: false,
   });
   return gateOutcome("executed", open.id, res.outcome === "sent", safe);
 }

@@ -44,13 +44,7 @@ function roleLabel(role: string): string {
   return role.charAt(0).toUpperCase() + role.slice(1);
 }
 
-export function TeamPanel({
-  members,
-  canInvite,
-}: {
-  members: Member[];
-  canInvite: boolean;
-}) {
+export function TeamPanel({ members, canInvite }: { members: Member[]; canInvite: boolean }) {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [role, setRole] = useState<Role>("agent");

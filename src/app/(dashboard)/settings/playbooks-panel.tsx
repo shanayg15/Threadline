@@ -18,11 +18,7 @@ type PlaybookRow = {
 /** delivery_checkin → "Delivery check-in". */
 function humanizeKey(key: string): string {
   const words = key.split("_").filter((w) => w.length > 0);
-  return words
-    .map((w, i) =>
-      i === 0 ? w.charAt(0).toUpperCase() + w.slice(1) : w,
-    )
-    .join(" ");
+  return words.map((w, i) => (i === 0 ? w.charAt(0).toUpperCase() + w.slice(1) : w)).join(" ");
 }
 
 function delayLabel(delayMinutes: number | null): string | null {
@@ -74,8 +70,8 @@ export function PlaybooksPanel({ playbooks }: { playbooks: PlaybookRow[] }) {
   return (
     <div className="space-y-3">
       <p className="text-sm text-muted-foreground">
-        Proactive follow-up campaigns the agent can run. These start firing in M8 once the
-        lifecycle engine is live.
+        Proactive follow-up campaigns the agent can run. These start firing in M8 once the lifecycle
+        engine is live.
       </p>
       {playbooks.length === 0 ? (
         <p className="text-sm text-muted-foreground">No playbooks configured yet.</p>

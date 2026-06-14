@@ -9,7 +9,10 @@ export const dynamic = "force-dynamic";
 const STATUSES = ["automated", "escalated", "blocked", "closed"] as const;
 const ACTIVITIES = ["all", "has_reply", "scheduled"] as const;
 
-function oneOf<T extends readonly string[]>(value: string | null, allowed: T): T[number] | undefined {
+function oneOf<T extends readonly string[]>(
+  value: string | null,
+  allowed: T,
+): T[number] | undefined {
   return value && (allowed as readonly string[]).includes(value) ? (value as T[number]) : undefined;
 }
 

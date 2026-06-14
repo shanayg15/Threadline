@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, isNull, sql } from "drizzle-orm";
 
 import { db } from "@/lib/db/client";
 import { customers, orderLineItems, orders } from "@/lib/db/schema";
@@ -49,6 +49,35 @@ export async function getByShopifyOrderId(
     .from(orders)
     .where(and(eq(orders.brandId, brandId), eq(orders.shopifyOrderId, shopifyOrderId)))
     .limit(1);
+  return rows[0];
+}
+
+/** Orders the heuristic delivery sweep should evaluate: shipped/fulfilled but not yet
+ * marked delivered. */
+export async function listDeliverable(brandId: string): Promise<Order[]> {
+  return db
+    .select()
+    .from(orders)
+    .where(
+      and(
+        eq(orders.brandId, brandId),
+        isNull(orders.deliveredAt),
+        sql`${orders.shippedAt} is not null`,
+        sql`${orders.fulfillmentStatus} in ('fulfilled','partial')`,
+      ),
+    );
+}
+
+export async function setDeliveredAt(
+  brandId: string,
+  id: string,
+  deliveredAt: Date,
+): Promise<Order | undefined> {
+  const rows = await db
+    .update(orders)
+    .set({ deliveredAt })
+    .where(and(eq(orders.brandId, brandId), eq(orders.id, id), isNull(orders.deliveredAt)))
+    .returning();
   return rows[0];
 }
 

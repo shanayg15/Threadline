@@ -31,10 +31,7 @@ export default async function CustomersPage() {
   return (
     <PageContainer>
       <div className="space-y-6">
-        <PageHeader
-          title="Customers"
-          description="Everyone you can reach, with consent state."
-        />
+        <PageHeader title="Customers" description="Everyone you can reach, with consent state." />
         <CustomersTable rows={rows} />
       </div>
     </PageContainer>

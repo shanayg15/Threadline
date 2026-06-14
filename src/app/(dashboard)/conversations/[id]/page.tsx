@@ -38,7 +38,9 @@ export default async function ConversationDetailPage({
     brands.getById(brandId),
     orders.listForCustomer(brandId, convo.customer.id),
     pendingActions.getOpen(brandId, id),
-    convo.assigneeUserId ? users.getById(brandId, convo.assigneeUserId) : Promise.resolve(undefined),
+    convo.assigneeUserId
+      ? users.getById(brandId, convo.assigneeUserId)
+      : Promise.resolve(undefined),
   ]);
 
   const messages: ThreadMessage[] = convo.messages

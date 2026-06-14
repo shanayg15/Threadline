@@ -76,7 +76,12 @@ one's Definition of Done is met and verified.
    status · live polling), human handoff (AI⇄Human, Pause, Resolve, compliance-gated
    composer), supervised-mode **Approve/Edit/Reject** drafts, Customers/Orders/Products
    (with `fitNotes` editing → re-embed), the 6-tab Settings, and the onboarding wizard. ✅
-8. Lifecycle engine, confirmation gates & attribution
+8. **Lifecycle engine, confirmation gates & attribution** — a BullMQ worker (`pnpm
+worker`): heuristic delivery → event → playbook → quiet-hours-gated proactive
+   check-in (treatment-only; control is a true holdout), the confirmation gate
+   (unambiguous YES → customer-paid Shopify **checkout link**, never a charge;
+   modify/unclear never execute), experiment groups + assist-based attribution, and a
+   basic Analytics page. **End of M8 = the usable V1.** ✅
 9. Marketing / landing site
 
 ## Out of scope (by design)

@@ -63,7 +63,11 @@ export async function runNightly(): Promise<{ resynced: number }> {
       await embedBrandKnowledge(brand.id);
       resynced++;
     } catch (err) {
-      console.error("[maintenance] nightly resync failed", brand.id, err instanceof Error ? err.message : err);
+      console.error(
+        "[maintenance] nightly resync failed",
+        brand.id,
+        err instanceof Error ? err.message : err,
+      );
     }
   }
   return { resynced };

@@ -5,13 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ComplianceForm } from "@/app/(dashboard)/settings/compliance-form";
 import { IntegrationsPanel } from "@/app/(dashboard)/settings/integrations-panel";
 import { PlaybooksPanel } from "@/app/(dashboard)/settings/playbooks-panel";
@@ -62,10 +56,7 @@ function Stepper({ current }: { current: number }) {
             </span>
             {i < TOTAL - 1 ? (
               <span
-                className={cn(
-                  "h-px flex-1",
-                  i < current ? "bg-primary" : "bg-muted-foreground/30",
-                )}
+                className={cn("h-px flex-1", i < current ? "bg-primary" : "bg-muted-foreground/30")}
               />
             ) : null}
           </li>
@@ -148,11 +139,7 @@ export function OnboardingWizard({ initial }: { initial: OnboardingInitial }) {
 
         {step === 2 ? (
           <div className="space-y-4">
-            <VoiceForm
-              initial={initial.voiceConfig}
-              onSaved={next}
-              submitLabel="Save & continue"
-            />
+            <VoiceForm initial={initial.voiceConfig} onSaved={next} submitLabel="Save & continue" />
             <div className="flex justify-start">
               <Button variant="outline" onClick={back}>
                 <ArrowLeft className="h-4 w-4" />
@@ -164,11 +151,7 @@ export function OnboardingWizard({ initial }: { initial: OnboardingInitial }) {
 
         {step === 3 ? (
           <div className="space-y-4">
-            <PoliciesForm
-              initial={initial.policies}
-              onSaved={next}
-              submitLabel="Save & continue"
-            />
+            <PoliciesForm initial={initial.policies} onSaved={next} submitLabel="Save & continue" />
             <div className="flex justify-start">
               <Button variant="outline" onClick={back}>
                 <ArrowLeft className="h-4 w-4" />

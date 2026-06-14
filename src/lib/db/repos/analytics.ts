@@ -64,9 +64,7 @@ export async function brandSummary(brandId: string): Promise<BrandSummary> {
     db
       .select({ count: sql<number>`count(*)::int` })
       .from(orders)
-      .where(
-        and(eq(orders.brandId, brandId), sql`${orders.attributedConversationId} is not null`),
-      ),
+      .where(and(eq(orders.brandId, brandId), sql`${orders.attributedConversationId} is not null`)),
 
     // Attributed revenue (cents), null-safe.
     db

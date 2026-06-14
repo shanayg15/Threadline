@@ -6,7 +6,22 @@ import { classifyAffirmative } from "./gate";
 // intent — these are the cases the spec calls out explicitly.
 
 describe("classifyAffirmative — CONFIRM (unambiguous yes)", () => {
-  for (const t of ["yes", "Yes", "yeah", "yep", "yup", "sure", "ok", "okay", "do it", "confirm", "go ahead", "sounds good", "Yes please!", "absolutely"]) {
+  for (const t of [
+    "yes",
+    "Yes",
+    "yeah",
+    "yep",
+    "yup",
+    "sure",
+    "ok",
+    "okay",
+    "do it",
+    "confirm",
+    "go ahead",
+    "sounds good",
+    "Yes please!",
+    "absolutely",
+  ]) {
     it(`"${t}" -> confirm`, () => expect(classifyAffirmative(t)).toBe("confirm"));
   }
 });
@@ -25,13 +40,51 @@ describe("classifyAffirmative — MODIFY (yes-but / change) re-confirms, never e
 });
 
 describe("classifyAffirmative — DECLINE", () => {
-  for (const t of ["no", "nope", "nah", "no thanks", "cancel", "don't", "do not", "never mind", "not now", "forget it"]) {
+  for (const t of [
+    "no",
+    "nope",
+    "nah",
+    "no thanks",
+    "cancel",
+    "don't",
+    "do not",
+    "never mind",
+    "not now",
+    "forget it",
+  ]) {
     it(`"${t}" -> decline`, () => expect(classifyAffirmative(t)).toBe("decline"));
   }
 });
 
 describe("classifyAffirmative — UNCLEAR (questions / vague) never execute", () => {
-  for (const t of ["maybe", "hmm", "what's the price again?", "how much is it?", "when would it ship?", "let me think", "", "👀", "idk"]) {
+  for (const t of [
+    "maybe",
+    "hmm",
+    "what's the price again?",
+    "how much is it?",
+    "when would it ship?",
+    "let me think",
+    "",
+    "👀",
+    "idk",
+  ]) {
     it(`"${t}" -> unclear`, () => expect(classifyAffirmative(t)).toBe("unclear"));
+  }
+});
+
+describe("classifyAffirmative — a yes NEXT TO a negation must NOT confirm (the dangerous case)", () => {
+  // These all contain a confirm token AND a cancel/negation — they must NOT execute.
+  for (const t of [
+    "absolutely not",
+    "yes cancel it",
+    "ok cancel",
+    "yep cancel that",
+    "yes stop",
+    "yes don't",
+    "ok wait",
+    "sure what's the catch",
+    "yes but actually no",
+  ]) {
+    it(`"${t}" -> not confirm`, () => expect(classifyAffirmative(t)).not.toBe("confirm"));
   }
 });

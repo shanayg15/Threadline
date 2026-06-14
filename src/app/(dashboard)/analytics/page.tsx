@@ -16,15 +16,7 @@ import {
 export const metadata = { title: "Analytics — Threadline" };
 export const dynamic = "force-dynamic";
 
-function Metric({
-  label,
-  value,
-  hint,
-}: {
-  label: string;
-  value: string;
-  hint?: string;
-}) {
+function Metric({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -50,13 +42,13 @@ export default async function AnalyticsPage() {
   const summary = await analytics.brandSummary(brandId);
 
   const engagementPct = `${(summary.engagementRate * 100).toFixed(1)}%`;
-  const statusEntries = (
-    Object.keys(STATUS_LABELS) as Array<keyof typeof STATUS_LABELS>
-  ).map((key) => ({
-    key,
-    label: STATUS_LABELS[key],
-    count: summary.conversationsByStatus[key],
-  }));
+  const statusEntries = (Object.keys(STATUS_LABELS) as Array<keyof typeof STATUS_LABELS>).map(
+    (key) => ({
+      key,
+      label: STATUS_LABELS[key],
+      count: summary.conversationsByStatus[key],
+    }),
+  );
 
   return (
     <PageContainer>
@@ -67,10 +59,7 @@ export default async function AnalyticsPage() {
         />
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <Metric
-            label="Total conversations"
-            value={summary.totalConversations.toLocaleString()}
-          />
+          <Metric label="Total conversations" value={summary.totalConversations.toLocaleString()} />
           <Metric
             label="Engagement rate"
             value={engagementPct}
