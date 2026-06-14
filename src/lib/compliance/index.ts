@@ -13,6 +13,13 @@ export type QuietHours = { start: string; end: string };
 export type FrequencyCaps = { perDay: number; perWeek: number };
 
 /**
+ * Fallback zone when a customer's timezone is missing or not a valid IANA name.
+ * The customer tz is normally valid (it comes from Shopify/seed), but if it isn't we
+ * must NOT fail open and blast at any hour — quiet hours still apply in this default.
+ */
+const DEFAULT_TIMEZONE = "America/New_York";
+
+/**
  * Deterministic compliance gate. PURE functions — they return a decision and never
  * touch the DB; the caller performs the consent/suppression/audit writes the
  * decision implies. The LLM is NEVER involved in any of this.
@@ -90,8 +97,8 @@ function quietHours(
   const end = parseHm(qh.end);
   if (!start || !end) return { withinWindow: true };
 
-  const local = DateTime.fromJSDate(now).setZone(timezone);
-  if (!local.isValid) return { withinWindow: true }; // unknown tz → don't block
+  let local = DateTime.fromJSDate(now).setZone(timezone);
+  if (!local.isValid) local = DateTime.fromJSDate(now).setZone(DEFAULT_TIMEZONE); // fail safe
 
   const nowMin = local.hour * 60 + local.minute;
   const startMin = start.h * 60 + start.m;

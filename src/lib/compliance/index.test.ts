@@ -18,6 +18,9 @@ describe("evaluateInbound — opt-out", () => {
     "CANCEL",
     "END",
     "QUIT",
+    "STOPALL",
+    "OPTOUT",
+    "REVOKE",
   ]) {
     it(`"${body}" -> opt_out with a confirmation reply`, () => {
       const d = evaluateInbound({ brand: BRAND, customer: optedIn, messageBody: body });
@@ -109,12 +112,13 @@ describe("canSendOutbound — consent, quiet hours, caps", () => {
   it("opted-in, within window, under caps -> allowed", () => {
     expect(canSendOutbound(out({})).allowed).toBe(true);
   });
-  it("outside quiet hours -> blocked with a nextAllowedAt", () => {
+  it("outside quiet hours -> blocked with a nextAllowedAt at the next window start (DST-correct)", () => {
     const d = canSendOutbound(out({ now: NIGHT_NY }));
     expect(d.allowed).toBe(false);
     if (!d.allowed) {
       expect(d.reason).toMatch(/quiet hours/);
-      expect(d.nextAllowedAt).toBeInstanceOf(Date);
+      // NIGHT_NY is 23:00 Jun 14 in NY (EDT); the next 09:00 NY is Jun 15 09:00 EDT = 13:00Z.
+      expect(d.nextAllowedAt?.toISOString()).toBe("2026-06-15T13:00:00.000Z");
     }
   });
   it("over the daily cap -> blocked", () => {
@@ -151,6 +155,50 @@ describe("canSendOutbound — timezone correctness (same UTC instant, different 
     );
     expect(ny.allowed).toBe(false);
     expect(la.allowed).toBe(true);
+  });
+});
+
+describe("canSendOutbound — midnight-crossing sendable window (22:00–06:00)", () => {
+  // A nightclub/late-brand window: sendable overnight, quiet during the day. Exercises
+  // the `startMin > endMin` branch of quietHours().
+  const overnight = {
+    quietHours: { start: "22:00", end: "06:00" },
+    frequencyCaps: { perDay: 99, perWeek: 99 },
+  };
+  // 18:00 NY (a daytime instant) -> outside the overnight window -> blocked.
+  const DAY_NY = new Date("2026-06-15T22:00:00Z"); // 18:00 EDT
+  // 23:00 NY -> inside the overnight window -> allowed.
+  const LATE_NY = new Date("2026-06-16T03:00:00Z"); // 23:00 EDT (prev day)
+
+  it("blocked during the day, allowed late at night, in the customer's tz", () => {
+    const day = canSendOutbound(out({ brand: overnight, now: DAY_NY }));
+    const late = canSendOutbound(out({ brand: overnight, now: LATE_NY }));
+    expect(day.allowed).toBe(false);
+    expect(late.allowed).toBe(true);
+  });
+});
+
+describe("canSendOutbound — invalid timezone fails safe (no fail-open)", () => {
+  it("a malformed tz at night is still blocked (falls back to a default zone, not open)", () => {
+    const d = canSendOutbound(
+      out({ now: NIGHT_NY, customer: { consentStatus: "opted_in", timezone: "Not/AZone" } }),
+    );
+    expect(d.allowed).toBe(false);
+  });
+  it("a malformed tz inside the default window is allowed", () => {
+    const d = canSendOutbound(
+      out({ now: WITHIN, customer: { consentStatus: "opted_in", timezone: "" } }),
+    );
+    expect(d.allowed).toBe(true);
+  });
+});
+
+describe("canSendOutbound — degenerate window (start == end blocks all proactive sends)", () => {
+  it("a zero-length window is treated as 'never send' (fail-safe), not 'always send'", () => {
+    const d = canSendOutbound(
+      out({ brand: { quietHours: { start: "09:00", end: "09:00" }, frequencyCaps: null } }),
+    );
+    expect(d.allowed).toBe(false);
   });
 });
 

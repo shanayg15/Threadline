@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "messages_brand_channel_msg_id_uniq" ON "messages" USING btree ("brand_id","channel_message_id") WHERE "messages"."channel_message_id" is not null;

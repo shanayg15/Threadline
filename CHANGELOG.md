@@ -4,6 +4,30 @@ All notable changes to Threadline are documented here. The project is built
 milestone-by-milestone toward a usable V1; each milestone is a self-contained,
 verified increment.
 
+## M5 — Channel Layer & Compliance Middleware
+
+The trust-critical milestone: the Twilio SMS/MMS channel, an inbound pipeline, and a
+**deterministic** compliance gate in front of everything. The LLM is never involved
+in any compliance decision.
+
+### Added
+
+- **Channel interface** + **Twilio adapter**: `send` honors the `SEND_REAL_SMS` hard
+  gate (false → mock provider id, no carrier call); `verifySignature` validates the
+  X-Twilio-Signature; `parseInbound` normalizes the form-encoded webhook.
+- **Deterministic compliance** (`src/lib/compliance`, pure, no DB/LLM): a first-word
+  keyword matcher (STOP wins; "STOP please"/"Stop." opt out, "please don't stop"
+  doesn't), `evaluateInbound` (opt_out/help/resume/blocked/proceed — "YES" resumes
+  ONLY when opted out), and `canSendOutbound` (opt-out absolute → consent → quiet
+  hours in the customer's tz via luxon (DST-correct, with a `nextAllowedAt`) → caps;
+  inbound replies exempt). **91 tests** including the mandatory matrix.
+- **Inbound webhook** (`/api/webhooks/twilio/inbound`): verify (bad → 403) → resolve
+  brand by number (fail-closed) + upsert customer → land the message → compliance
+  side effects (consent, suppression, consentLog/auditLog, mandated canned replies)
+  → agent handoff stub (M6). **Status webhook** maps delivery status by provider id.
+- Compliance-gated `sendOutbound` + a gate-bypassing `sendComplianceReply` for the
+  mandated STOP/HELP/START confirmations.
+
 ## M4 — Shopify Integration, Sync & Embeddings
 
 The data plane the agent will use (M6): catalog/customer/order sync, webhooks,

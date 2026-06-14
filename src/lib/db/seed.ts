@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import { and, eq } from "drizzle-orm";
 
+import { env } from "@/lib/config/env";
 import { db, pool } from "@/lib/db/client";
 import * as repos from "@/lib/db/repos";
 import {
@@ -25,6 +26,17 @@ import { one } from "@/lib/db/repos/_util";
 const BRAND_SLUG = "demo-apparel-co";
 const OWNER_EMAIL = "owner@demo-apparel.example";
 const OWNER_PASSWORD = "demo-password-123"; // dev-only, printed to console
+
+// The brand's sending number routes inbound webhooks (resolveBrandByNumber matches
+// channelConfig.phoneNumber against Twilio's `To`). Use the real Twilio number when
+// configured, else a clearly-fake 555-01xx demo number so inbound works end-to-end.
+const DEMO_PHONE_NUMBER = env.TWILIO_FROM_NUMBER ?? "+15555550100";
+const DEMO_SUPPORT_CONTACT = "help@demo-apparel.example";
+const CHANNEL_CONFIG = {
+  provider: "twilio",
+  phoneNumber: DEMO_PHONE_NUMBER,
+  supportContact: DEMO_SUPPORT_CONTACT,
+};
 
 const VOICE: VoiceConfig = {
   agentName: "Riley",
@@ -59,11 +71,11 @@ async function upsertBrand(): Promise<string> {
         quietHours: { start: "09:00", end: "21:00" },
         frequencyCaps: { perDay: 1, perWeek: 3 },
         supervisedMode: true,
-        channelConfig: { provider: "twilio" },
+        channelConfig: CHANNEL_CONFIG,
       })
       .onConflictDoUpdate({
         target: brands.slug,
-        set: { voiceConfig: VOICE, policies: POLICIES },
+        set: { voiceConfig: VOICE, policies: POLICIES, channelConfig: CHANNEL_CONFIG },
       })
       .returning(),
   );

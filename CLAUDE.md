@@ -66,7 +66,8 @@ one's Definition of Done is met and verified.
 3. **Auth & dashboard shell** — Auth.js v5, brand-scoped sessions, console shell. ✅
 4. **Shopify integration, sync & embeddings** — commerce adapter, sync, webhooks,
    pgvector embeddings, live reads. ✅
-5. Channel layer & compliance middleware
+5. **Channel layer & compliance middleware** — Twilio adapter, inbound pipeline,
+   deterministic STOP/HELP/START + quiet-hours/consent/caps. ✅
 6. Agent engine, core loop & eval harness
 7. Console UI, handoff, read pages & onboarding
 8. Lifecycle engine, confirmation gates & attribution

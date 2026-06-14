@@ -13,17 +13,19 @@ compliance, human handoff, and honest lift-vs-holdout measurement.
 
 ## Status
 
-Built milestone-by-milestone toward a usable V1. **M1 (foundation), M2 (data model
-& database), M3 (auth & dashboard shell), and M4 (Shopify sync & embeddings) are
-complete**; M5 (channel layer & compliance middleware) is next. See
+Built milestone-by-milestone toward a usable V1. **M1–M5 are complete** (foundation;
+data model & database; auth & dashboard shell; Shopify sync & embeddings; channel
+layer & compliance middleware); M6 (agent engine & core loop) is next. See
 [`CLAUDE.md`](./CLAUDE.md) for the architecture, conventions, and the hard safety
 invariants every milestone must obey.
 
-**Keyless dev:** without Shopify or OpenAI credentials, the app falls back to a
-fixture-backed mock commerce provider and a deterministic local embedder
-(`EMBEDDINGS_PROVIDER=local`), so the full sync → embed → search → live-read path
-runs end-to-end. Set the real `SHOPIFY_*` / `OPENAI_API_KEY` to use the live
-integrations.
+**Keyless dev:** without Shopify/OpenAI/Twilio credentials, the app falls back to a
+fixture-backed mock commerce provider, a deterministic local embedder
+(`EMBEDDINGS_PROVIDER=local`), and a mocked SMS send (`SEND_REAL_SMS=false` — the
+default), so the whole pipeline runs end-to-end. Compliance (STOP/HELP/START, quiet
+hours, consent, frequency caps) is **deterministic TypeScript, never the LLM**, with
+an exhaustive test suite. Set the real `SHOPIFY_*` / `OPENAI_API_KEY` / `TWILIO_*`
+(+ `SEND_REAL_SMS=true`) to use the live integrations.
 
 ```bash
 pnpm tsx src/lib/commerce/sync-cli.ts <brandId>     # sync catalog/customers/orders

@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   boolean,
   index,
@@ -6,6 +7,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 
@@ -69,5 +71,13 @@ export const messages = pgTable(
     model: text(),
     createdAt: createdAt(),
   },
-  (t) => [index("messages_conversation_created_idx").on(t.conversationId, t.createdAt)],
+  (t) => [
+    index("messages_conversation_created_idx").on(t.conversationId, t.createdAt),
+    // Idempotency: a provider message id (Twilio MessageSid, or our mock id) is unique
+    // per brand. Lets the inbound webhook dedupe Twilio retries and backstops a
+    // double-delivery race at the DB so a STOP is never confirmed twice.
+    uniqueIndex("messages_brand_channel_msg_id_uniq")
+      .on(t.brandId, t.channelMessageId)
+      .where(sql`${t.channelMessageId} is not null`),
+  ],
 );

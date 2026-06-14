@@ -43,6 +43,13 @@
       "when": 1781402366569,
       "tag": "0005_events_dedupe",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1781450970122,
+      "tag": "0006_messages_idempotency",
+      "breakpoints": true
     }
   ]
 }
