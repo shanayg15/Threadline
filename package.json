@@ -20,6 +20,7 @@
     "db:seed": "tsx src/lib/db/seed.ts",
     "test": "vitest run",
     "test:watch": "vitest",
+    "eval": "tsx evals/run.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",

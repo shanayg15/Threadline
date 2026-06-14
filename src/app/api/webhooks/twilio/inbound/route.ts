@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { Agent } from "@/lib/agent";
 import { sendComplianceReply } from "@/lib/channels/outbound";
 import { resolveBrandByNumber } from "@/lib/channels/resolve";
 import { twilioChannel } from "@/lib/channels/twilio";
@@ -174,14 +175,16 @@ async function handleInbound(inbound: Inbound): Promise<NextResponse> {
       break;
 
     case "proceed":
-      // TODO(M6): hand off to Agent.respond(conversation.id) in a background task /
-      // queue (the webhook must stay fast). M5 only lands the cleared inbound.
       await auditRepo.record(brand.id, {
         actor: "system",
         action: "inbound_received",
         targetType: "conversation",
         targetId: conversation.id,
       });
+      // Hand the cleared inbound to the agent. Fire-and-forget with its own timeout +
+      // fail-safe so a model/tool error can never 500 this webhook (the webhook must
+      // stay fast). M8 moves this onto the durable queue.
+      Agent.respondAsync(brand.id, conversation.id);
       break;
   }
 

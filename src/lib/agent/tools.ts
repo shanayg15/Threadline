@@ -21,6 +21,17 @@ export function createTools(ctx: ToolContext) {
     if (!flags.toolsUsed.includes(name)) flags.toolsUsed.push(name);
   };
 
+  // Side-effect stores: real repos by default, injectable for tests/evals (DB-free).
+  const listVariantsFn =
+    ctx.listVariants ??
+    (async (productId: string) =>
+      (await productsRepo.listVariants(brand.id, productId)).map((v) => ({
+        variantId: v.id,
+        title: v.title,
+        options: v.options ?? {},
+      })));
+  const proposals = ctx.proposals ?? pendingActionsRepo;
+
   const impls = {
     async searchCatalog(args: { query: string; limit?: number }) {
       mark("search_catalog");
@@ -37,8 +48,7 @@ export function createTools(ctx: ToolContext) {
      * call get_variant_live for those. Lets the agent go from a search hit to a variant. */
     async listVariants(args: { productId: string }) {
       mark("list_variants");
-      const variants = await productsRepo.listVariants(brand.id, args.productId);
-      return variants.map((v) => ({ variantId: v.id, title: v.title, options: v.options ?? {} }));
+      return listVariantsFn(args.productId);
     },
 
     async getVariantLive(args: { variantId: string }) {
@@ -90,7 +100,7 @@ export function createTools(ctx: ToolContext) {
       orderId?: string;
     }) {
       mark("propose_action");
-      const existing = await pendingActionsRepo.getOpen(brand.id, conversationId);
+      const existing = await proposals.getOpen(brand.id, conversationId);
       if (existing) {
         return {
           proposed: false as const,
@@ -98,7 +108,7 @@ export function createTools(ctx: ToolContext) {
           actionId: existing.id,
         };
       }
-      const action = await pendingActionsRepo.create(brand.id, {
+      const action = await proposals.create(brand.id, {
         conversationId,
         type: args.type,
         payload: {
@@ -130,7 +140,9 @@ export function createTools(ctx: ToolContext) {
       description:
         "Find relevant products or brand policies by semantic + keyword search. Returns matches to ground your answer. Does NOT return live stock or price — call get_variant_live for those.",
       inputSchema: z.object({
-        query: z.string().describe("What to search for, e.g. 'lightweight rain jacket' or 'return policy'"),
+        query: z
+          .string()
+          .describe("What to search for, e.g. 'lightweight rain jacket' or 'return policy'"),
         limit: z.number().int().min(1).max(10).optional(),
       }),
       execute: impls.searchCatalog,
@@ -161,8 +173,15 @@ export function createTools(ctx: ToolContext) {
       description:
         "Propose a side effect (place an order, create an exchange, or send a checkout link). PROPOSE-ONLY: this records the request and asks the customer to confirm — it does NOT place, charge, or complete anything. After calling it, ask the customer to reply YES to confirm.",
       inputSchema: z.object({
-        type: z.enum(["place_order", "create_exchange", "create_checkout_link", "modify_subscription"]),
-        summary: z.string().describe("A one-line, human-readable summary of what is being proposed."),
+        type: z.enum([
+          "place_order",
+          "create_exchange",
+          "create_checkout_link",
+          "modify_subscription",
+        ]),
+        summary: z
+          .string()
+          .describe("A one-line, human-readable summary of what is being proposed."),
         variantId: z.string().optional(),
         quantity: z.number().int().positive().optional(),
         orderId: z.string().optional(),

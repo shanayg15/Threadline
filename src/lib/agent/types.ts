@@ -39,12 +39,32 @@ export type ToolFlags = {
   toolsUsed: string[];
 };
 
+/** The pending-action store a propose-only tool writes to. Defaults to the real repo;
+ * the eval harness injects an in-memory one so scenarios run without a DB. */
+export type ProposalStore = {
+  getOpen(brandId: string, conversationId: string): Promise<{ id: string } | undefined>;
+  create(
+    brandId: string,
+    data: {
+      conversationId: string;
+      type: "place_order" | "create_exchange" | "create_checkout_link" | "modify_subscription";
+      payload?: Record<string, unknown>;
+    },
+  ): Promise<{ id: string }>;
+};
+
 export type ToolContext = {
   brand: AgentBrand;
   customer: AgentCustomer;
   conversationId: string;
   commerce: CommerceProvider;
   flags: ToolFlags;
+  /** Injectable for tests/evals; defaults to the real products repo. */
+  listVariants?: (
+    productId: string,
+  ) => Promise<Array<{ variantId: string; title: string | null; options: Record<string, string> }>>;
+  /** Injectable for tests/evals; defaults to the real pendingActions repo. */
+  proposals?: ProposalStore;
 };
 
 export type ModelUsage = { inputTokens: number | null; outputTokens: number | null };
