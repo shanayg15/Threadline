@@ -1,19 +1,14 @@
-import { MessageSquare } from "lucide-react";
-
-import { EmptyState } from "@/components/empty-state";
-import { PageHeader } from "@/components/page-header";
+import { MessageSquareText } from "lucide-react";
 
 export const metadata = { title: "Conversations — Threadline" };
 
-export default function ConversationsPage() {
+/** The right pane when no thread is selected (desktop). On mobile the list fills the
+ * screen and this isn't shown until a conversation is opened. */
+export default function ConversationsIndexPage() {
   return (
-    <div className="space-y-6">
-      <PageHeader title="Conversations" description="Every customer thread, in one place." />
-      <EmptyState
-        icon={MessageSquare}
-        title="The conversations console arrives in M7"
-        description="A filterable list plus a three-pane thread view — iMessage-style bubbles, the customer panel, AI⇄Human handoff, supervised approvals, and Pause."
-      />
+    <div className="flex h-full w-full flex-col items-center justify-center p-8 text-center">
+      <MessageSquareText className="mb-3 size-10 text-muted-foreground/40" />
+      <p className="text-sm text-muted-foreground">Select a conversation to view the thread.</p>
     </div>
   );
 }
