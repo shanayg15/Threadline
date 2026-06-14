@@ -48,4 +48,7 @@ next-env.d.ts
 !.vscode/extensions.json
 *.swp
 
+# local dev tooling (Claude Code preview launch config)
+.claude/
+
 # drizzle: migrations AND meta/journal ARE committed (see drizzle/). Nothing ignored here.
