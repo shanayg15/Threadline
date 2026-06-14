@@ -157,3 +157,61 @@ export async function sendComplianceReply(
     isReply: true,
   });
 }
+
+/**
+ * Deliver a supervised-mode draft a human approved: runs the compliance gate, sends via
+ * the channel (mock when SEND_REAL_SMS=false), and turns the EXISTING draft row into the
+ * sent message in place (no duplicate). Compliance is still honored — an opted-out number
+ * is blocked and the draft stays pending. `isReply` exempts quiet hours/caps (a human is
+ * approving a reply in the loop). Returns the block reason for the UI when not sent.
+ */
+export async function deliverHeldDraft(
+  brand: OutboundBrand,
+  customer: OutboundCustomer,
+  conversationId: string,
+  draft: { id: string; model: string | null; costCents: number | null },
+  body: string,
+  opts: { sender: "ai" | "human"; approvedByUserId: string },
+): Promise<SendOutboundResult> {
+  const now = new Date();
+  const decision = canSendOutbound({
+    brand: { quietHours: brand.quietHours, frequencyCaps: brand.frequencyCaps },
+    customer: { consentStatus: customer.consentStatus, timezone: customer.timezone },
+    now,
+    recentOutbound: await recentOutboundCounts(brand.id, conversationId, now),
+    isReply: true,
+  });
+  if (!decision.allowed) {
+    await audit.record(brand.id, {
+      actor: "system",
+      action: "outbound_blocked",
+      targetType: "conversation",
+      targetId: conversationId,
+      payload: { reason: decision.reason, draftId: draft.id },
+    });
+    return { sent: false, reason: decision.reason };
+  }
+
+  let result: Awaited<ReturnType<typeof twilioChannel.send>>;
+  try {
+    result = await twilioChannel.send({ to: customer.phoneE164, body });
+  } catch (err) {
+    await audit.record(brand.id, {
+      actor: "system",
+      action: "delivery_failed",
+      targetType: "conversation",
+      targetId: conversationId,
+      payload: { reason: err instanceof Error ? err.message : String(err), draftId: draft.id },
+    });
+    return { sent: false, reason: "send failed" };
+  }
+
+  await conversations.markDraftSent(brand.id, draft.id, {
+    sender: opts.sender,
+    approvedByUserId: opts.approvedByUserId,
+    body,
+    channelMessageId: result.providerMessageId,
+    deliveryStatus: result.status,
+  });
+  return { sent: true, providerMessageId: result.providerMessageId };
+}

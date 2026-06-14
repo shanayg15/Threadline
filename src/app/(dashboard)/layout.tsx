@@ -13,7 +13,10 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   const brand = await brands.getById(brandId);
 
   return (
-    <div className="flex min-h-screen">
+    // h-screen + overflow-hidden so the console (Conversations) can be a full-height
+    // three-pane surface with its own internal scrolling; read pages wrap their content
+    // in <PageContainer> for normal page scroll.
+    <div className="flex h-screen overflow-hidden">
       <Sidebar className="hidden md:flex" />
       <div className="flex min-w-0 flex-1 flex-col">
         <TopBar
@@ -22,9 +25,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
           userEmail={email}
           devMode={!env.SEND_REAL_SMS}
         />
-        <main className="flex-1">
-          <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">{children}</div>
-        </main>
+        <main className="min-h-0 flex-1 overflow-hidden">{children}</main>
       </div>
     </div>
   );
