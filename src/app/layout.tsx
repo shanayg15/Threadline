@@ -16,10 +16,40 @@ const mono = JetBrains_Mono({
   display: "swap",
 });
 
+const APP_URL = process.env.APP_URL ?? "http://localhost:3000";
+
 export const metadata: Metadata = {
-  title: "Threadline — the post-purchase text concierge",
+  metadataBase: new URL(APP_URL),
+  title: {
+    default: "Threadline — the post-purchase text concierge",
+    template: "%s",
+  },
   description:
     "An open-source, SMS-first AI concierge that keeps a persistent text thread with every customer — answering questions before checkout and following up after delivery.",
+  applicationName: "Threadline",
+  keywords: [
+    "post-purchase",
+    "conversational commerce",
+    "SMS concierge",
+    "Shopify",
+    "DTC",
+    "customer retention",
+    "open source",
+  ],
+  openGraph: {
+    type: "website",
+    siteName: "Threadline",
+    title: "Threadline — the post-purchase text concierge",
+    description:
+      "One persistent SMS thread per customer, grounded in your live Shopify catalog — answering questions before checkout and following up after delivery. Open source.",
+    url: "/",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Threadline — the post-purchase text concierge",
+    description:
+      "One persistent SMS thread per customer, grounded in your live Shopify catalog. Open source.",
+  },
 };
 
 export default function RootLayout({
