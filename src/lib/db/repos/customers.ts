@@ -44,14 +44,21 @@ export async function upsertByPhone(
   phoneE164: string,
   data: CustomerData = {},
 ): Promise<Customer> {
+  const insert = db.insert(customers).values({ ...data, brandId, phoneE164 });
+
+  // Drizzle rejects an empty onConflict set, so with no fields to update (e.g. just
+  // registering an inbound sender) fall back to DO NOTHING + read the existing row.
+  if (Object.keys(data).length === 0) {
+    const inserted = await insert.onConflictDoNothing().returning();
+    if (inserted[0]) return inserted[0];
+    const existing = await getByPhone(brandId, phoneE164);
+    if (!existing) throw new Error("upsertByPhone: row vanished after conflict");
+    return existing;
+  }
+
   return one(
-    await db
-      .insert(customers)
-      .values({ ...data, brandId, phoneE164 })
-      .onConflictDoUpdate({
-        target: [customers.brandId, customers.phoneE164],
-        set: data,
-      })
+    await insert
+      .onConflictDoUpdate({ target: [customers.brandId, customers.phoneE164], set: data })
       .returning(),
   );
 }
