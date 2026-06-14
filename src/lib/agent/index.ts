@@ -7,6 +7,7 @@ import { notifyEscalation } from "@/lib/slack/notify";
 
 import { estimateCostCents, estimateCostUsd } from "./cost";
 import { critiqueReply } from "./critique";
+import { runConfirmationGate } from "./gate";
 import { getAgentModel } from "./model";
 import { buildSystemPrompt, latestInbound, toModelMessages } from "./prompt";
 import { startAgentTrace } from "./tracing";
@@ -107,6 +108,11 @@ export async function respond(brandId: string, conversationId: string): Promise<
 
     const brandRow = await brandsRepo.getById(brandId);
     if (!brandRow) return { status: "skipped", reason: "brand not found" };
+
+    // M8 confirmation gate: if a proposed action is open, this inbound is the answer to
+    // it — classify and (only on an unambiguous YES) execute, BEFORE the normal agent run.
+    const gate = await runConfirmationGate(brandRow, convo);
+    if (gate.handled && gate.outcome) return gate.outcome;
 
     const brand: AgentBrand = {
       id: brandRow.id,

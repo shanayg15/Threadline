@@ -135,6 +135,9 @@ export function createTools(ctx: ToolContext) {
           quantity: args.quantity ?? null,
           orderId: args.orderId ?? null,
         },
+        // Abandoned proposals expire (swept by maintenance) so a stale "reply YES" can't
+        // be confirmed days later against changed stock/price.
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       });
       ctx.flags.proposedActionId = action.id;
       return {

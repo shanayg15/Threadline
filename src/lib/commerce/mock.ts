@@ -118,4 +118,16 @@ export class MockCommerce extends BaseCommerce {
       deliveredAt: fixture.deliveredAt,
     };
   }
+
+  /** A deterministic mock cart permalink (carries the attribution discount code) — the
+   * keyless equivalent of the real Shopify cart link the customer would pay. */
+  async createCheckoutLink(
+    _brandId: string,
+    lineItems: Array<{ variantId: string; quantity: number }>,
+    opts?: { discountCode?: string },
+  ): Promise<{ url: string }> {
+    const items = lineItems.map((li) => `${li.variantId}:${Math.max(1, li.quantity)}`).join(",");
+    const query = opts?.discountCode ? `?discount=${encodeURIComponent(opts.discountCode)}` : "";
+    return { url: `https://demo-apparel.example/cart/${items}${query}` };
+  }
 }

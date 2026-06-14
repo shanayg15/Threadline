@@ -70,6 +70,8 @@ export type RestOrder = {
   total_price?: string | null;
   fulfillment_status?: string | null;
   customer?: { id: number } | null;
+  /** Discount codes applied at checkout — the attribution token (M8) rides here. */
+  discount_codes?: Array<{ code?: string | null }> | null;
   fulfillments?: Array<{
     tracking_number?: string | null;
     tracking_company?: string | null;
@@ -82,6 +84,13 @@ export type RestOrder = {
     price?: string | null;
   }>;
 };
+
+/** The discount codes on an order, uppercased (M8 attribution matching). */
+export function orderDiscountCodes(o: RestOrder): string[] {
+  return (o.discount_codes ?? [])
+    .map((d) => d.code?.trim().toUpperCase())
+    .filter((c): c is string => Boolean(c));
+}
 
 // REST webhooks use numeric ids; normalize to gid form so they reconcile with the
 // GraphQL sync rows (which key on gid://shopify/...).

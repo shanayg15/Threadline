@@ -51,6 +51,7 @@ export type ProposalStore = {
       conversationId: string;
       type: "place_order" | "create_exchange" | "create_checkout_link" | "modify_subscription";
       payload?: Record<string, unknown>;
+      expiresAt?: Date;
     },
   ): Promise<{ id: string }>;
 };
@@ -112,6 +113,13 @@ export type AgentOutcome =
       model: string;
     }
   | { status: "escalated"; reply: string | null; reason: string; toolsUsed: string[] }
+  | {
+      status: "gate";
+      action: "executed" | "declined" | "unclear" | "escalated";
+      pendingActionId: string;
+      sent: boolean;
+      reply: string | null;
+    }
   | { status: "skipped"; reason: string }
   | { status: "error"; reason: string };
 

@@ -141,6 +141,50 @@ export async function sendOutbound(
   return { sent: true, providerMessageId: result.providerMessageId };
 }
 
+export type SendOrHoldResult =
+  | { outcome: "sent"; providerMessageId: string }
+  | { outcome: "held"; draftId: string }
+  | { outcome: "blocked"; reason: string };
+
+/**
+ * Send an agent message OR hold it as a supervised draft (M7/M8). When the brand is in
+ * supervised mode the message is held for human approval; otherwise it goes out through
+ * the compliance gate. Used by the agent reply path, the confirmation gate, and the
+ * proactive lifecycle jobs so all three honor supervised mode + compliance identically.
+ */
+export async function sendOrHold(
+  brand: OutboundBrand,
+  customer: OutboundCustomer,
+  conversationId: string,
+  body: string,
+  opts: {
+    sender: "ai" | "human";
+    isReply?: boolean;
+    supervised: boolean;
+    model?: string | null;
+    costCents?: number | null;
+  },
+): Promise<SendOrHoldResult> {
+  if (opts.supervised) {
+    const draft = await conversations.createDraft(brand.id, {
+      conversationId,
+      body,
+      model: opts.model ?? null,
+      costCents: opts.costCents ?? null,
+    });
+    return { outcome: "held", draftId: draft.id };
+  }
+  const result = await sendOutbound(brand, customer, conversationId, body, {
+    sender: opts.sender,
+    isReply: opts.isReply,
+    model: opts.model ?? undefined,
+    costCents: opts.costCents ?? undefined,
+  });
+  return result.sent
+    ? { outcome: "sent", providerMessageId: result.providerMessageId }
+    : { outcome: "blocked", reason: result.reason };
+}
+
 /** Send a mandated compliance reply (STOP/HELP/START confirmation) — bypasses the
  * send gate so it reaches even a just-opted-out number, and records it. */
 export async function sendComplianceReply(

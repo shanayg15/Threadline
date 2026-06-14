@@ -6,12 +6,14 @@ import { decrypt } from "@/lib/db/crypto";
 import * as eventsRepo from "@/lib/db/repos/events";
 import { integrations, orders } from "@/lib/db/schema";
 import { redis } from "@/lib/redis";
+import { recordOrderAttribution } from "@/lib/measure/attribution";
 import { upsertCustomer, upsertOrder, upsertProduct } from "./sync-upserts";
 import {
   fulfillmentOrderGid,
   mapWebhookCustomer,
   mapWebhookOrder,
   mapWebhookProduct,
+  orderDiscountCodes,
   type RestCustomer,
   type RestFulfillment,
   type RestOrder,
@@ -115,9 +117,19 @@ export async function handleShopifyWebhook(
       return;
 
     case "orders/create":
-    case "orders/updated":
-      await upsertOrder(brandId, mapWebhookOrder(payload as RestOrder));
+    case "orders/updated": {
+      const restOrder = payload as RestOrder;
+      const order = mapWebhookOrder(restOrder);
+      await upsertOrder(brandId, order);
+      // M8 attribution: if the order carries a conversation's attribution code, link it
+      // back to that thread (idempotent — a retry won't re-attribute).
+      await recordOrderAttribution(brandId, {
+        shopifyOrderId: order.shopifyOrderId,
+        discountCodes: orderDiscountCodes(restOrder),
+        totalCents: order.totalCents,
+      });
       return;
+    }
 
     case "orders/fulfilled": {
       // Order-shaped payload.

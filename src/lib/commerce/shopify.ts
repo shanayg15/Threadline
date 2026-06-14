@@ -123,10 +123,12 @@ type GraphQLEnvelope<T> = {
 export class ShopifyGraphQLClient {
   private readonly endpoint: string;
   private readonly accessToken: string;
+  readonly shopDomain: string;
 
   constructor(creds: ShopifyCreds) {
     this.endpoint = `https://${creds.shopDomain}/admin/api/${creds.apiVersion}/graphql.json`;
     this.accessToken = creds.accessToken;
+    this.shopDomain = creds.shopDomain;
   }
 
   async request<T>(query: string, variables?: Record<string, unknown>): Promise<T> {
@@ -406,6 +408,32 @@ export class ShopifyCommerce extends BaseCommerce {
       cursor = data.orders.pageInfo.hasNextPage ? data.orders.pageInfo.endCursor : null;
     } while (cursor);
     return count;
+  }
+
+  /**
+   * Build a Shopify CART PERMALINK the customer pays — `/cart/{variantNumericId}:{qty},…`
+   * with an optional `?discount=` attribution code. This is a link, NOT a charge: the
+   * customer completes payment in Shopify's own checkout. No `write_*` scope needed
+   * (a draft-order + invoice URL would be a richer alternative requiring write_draft_orders).
+   */
+  async createCheckoutLink(
+    brandId: string,
+    lineItems: Array<{ variantId: string; quantity: number }>,
+    opts?: { discountCode?: string },
+  ): Promise<{ url: string }> {
+    const parts: string[] = [];
+    for (const li of lineItems) {
+      const row = await db
+        .select({ shopifyVariantId: productVariants.shopifyVariantId })
+        .from(productVariants)
+        .where(and(eq(productVariants.brandId, brandId), eq(productVariants.id, li.variantId)))
+        .limit(1);
+      const numeric = row[0]?.shopifyVariantId?.split("/").pop();
+      if (numeric) parts.push(`${numeric}:${Math.max(1, li.quantity)}`);
+    }
+    if (parts.length === 0) throw new Error("createCheckoutLink: no resolvable variants");
+    const query = opts?.discountCode ? `?discount=${encodeURIComponent(opts.discountCode)}` : "";
+    return { url: `https://${this.client.shopDomain}/cart/${parts.join(",")}${query}` };
   }
 
   // LIVE: resolve our internal variant id to its Shopify gid, then hit Shopify at
