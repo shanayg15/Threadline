@@ -1,0 +1,2 @@
+ALTER TABLE "conversations" ADD COLUMN "attribution_code" text;--> statement-breakpoint
+CREATE UNIQUE INDEX "conversations_brand_attribution_code_uniq" ON "conversations" USING btree ("brand_id","attribution_code") WHERE "conversations"."attribution_code" is not null;

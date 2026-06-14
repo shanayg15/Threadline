@@ -50,6 +50,20 @@ export async function list(brandId: string): Promise<Customer[]> {
   return db.select().from(customers).where(eq(customers.brandId, brandId));
 }
 
+/** Customers matching a consent / experiment-group cohort (M8 scheduling + analytics). */
+export async function listEligible(
+  brandId: string,
+  filters: { consentStatus?: ConsentStatus; experimentGroup?: ExperimentGroup },
+): Promise<Customer[]> {
+  const conds = [eq(customers.brandId, brandId)];
+  if (filters.consentStatus) conds.push(eq(customers.consentStatus, filters.consentStatus));
+  if (filters.experimentGroup) conds.push(eq(customers.experimentGroup, filters.experimentGroup));
+  return db
+    .select()
+    .from(customers)
+    .where(and(...conds));
+}
+
 /** Customers + order count, last contact time, and a conversation to link to (Customers
  * read page). A few aggregate queries assembled in JS — no N+1. */
 export async function listWithStats(brandId: string): Promise<CustomerWithStats[]> {

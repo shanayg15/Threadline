@@ -118,6 +118,50 @@ export async function setPaused(
   return rows[0];
 }
 
+// ---- Attribution code (M8) ----
+
+/** Set the conversation's attribution code (idempotent — keeps an existing one). */
+export async function setAttributionCode(
+  brandId: string,
+  id: string,
+  code: string,
+): Promise<Conversation | undefined> {
+  const rows = await db
+    .update(conversations)
+    .set({ attributionCode: code })
+    .where(
+      and(
+        eq(conversations.brandId, brandId),
+        eq(conversations.id, id),
+        sql`${conversations.attributionCode} is null`,
+      ),
+    )
+    .returning();
+  return rows[0] ?? (await getById(brandId, id));
+}
+
+export async function getById(brandId: string, id: string): Promise<Conversation | undefined> {
+  const rows = await db
+    .select()
+    .from(conversations)
+    .where(and(eq(conversations.brandId, brandId), eq(conversations.id, id)))
+    .limit(1);
+  return rows[0];
+}
+
+/** Resolve a conversation by the attribution code stamped on its checkout link. */
+export async function getByAttributionCode(
+  brandId: string,
+  code: string,
+): Promise<Conversation | undefined> {
+  const rows = await db
+    .select()
+    .from(conversations)
+    .where(and(eq(conversations.brandId, brandId), eq(conversations.attributionCode, code)))
+    .limit(1);
+  return rows[0];
+}
+
 // ---- Supervised-mode drafts (M7) ----
 //
 // A held draft is an outbound message row with approvalStatus 'pending' that is NOT

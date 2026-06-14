@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 
 import { db } from "@/lib/db/client";
 import { customers, orderLineItems, orders } from "@/lib/db/schema";
@@ -38,6 +38,39 @@ export async function listForCustomer(brandId: string, customerId: string): Prom
     .from(orders)
     .where(and(eq(orders.brandId, brandId), eq(orders.customerId, customerId)))
     .orderBy(desc(orders.createdAt));
+}
+
+export async function getByShopifyOrderId(
+  brandId: string,
+  shopifyOrderId: string,
+): Promise<Order | undefined> {
+  const rows = await db
+    .select()
+    .from(orders)
+    .where(and(eq(orders.brandId, brandId), eq(orders.shopifyOrderId, shopifyOrderId)))
+    .limit(1);
+  return rows[0];
+}
+
+/** Attribute an order to the conversation that drove it (M8). Idempotent: only sets it
+ * when not already attributed, so a webhook retry doesn't re-attribute. */
+export async function setAttributedConversation(
+  brandId: string,
+  orderId: string,
+  conversationId: string,
+): Promise<Order | undefined> {
+  const rows = await db
+    .update(orders)
+    .set({ attributedConversationId: conversationId })
+    .where(
+      and(
+        eq(orders.brandId, brandId),
+        eq(orders.id, orderId),
+        isNull(orders.attributedConversationId),
+      ),
+    )
+    .returning();
+  return rows[0];
 }
 
 /** Load an order with its line items. */

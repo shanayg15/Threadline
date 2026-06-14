@@ -51,3 +51,27 @@ export async function listUnprocessed(brandId: string, limit = 100): Promise<Eve
     .orderBy(asc(events.createdAt))
     .limit(limit);
 }
+
+/** Unprocessed events across ALL brands (the worker's lifecycle sweep). */
+export async function listUnprocessedAll(limit = 200): Promise<Event[]> {
+  return db
+    .select()
+    .from(events)
+    .where(isNull(events.processedAt))
+    .orderBy(asc(events.createdAt))
+    .limit(limit);
+}
+
+/**
+ * Atomically CLAIM an event: stamp processedAt only if still unprocessed. Returns the
+ * row when this caller won the claim, or undefined if it was already processed — so the
+ * scheduler (even on a BullMQ retry or a second worker) handles each event at most once.
+ */
+export async function markProcessed(brandId: string, id: string): Promise<Event | undefined> {
+  const rows = await db
+    .update(events)
+    .set({ processedAt: new Date() })
+    .where(and(eq(events.brandId, brandId), eq(events.id, id), isNull(events.processedAt)))
+    .returning();
+  return rows[0];
+}

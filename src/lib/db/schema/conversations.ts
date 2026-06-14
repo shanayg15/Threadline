@@ -41,6 +41,9 @@ export const conversations = pgTable(
     assigneeType: assigneeType().notNull().default("ai"),
     assigneeUserId: uuid().references(() => users.id),
     paused: boolean().notNull().default(false),
+    // Per-conversation attribution token (M8): stamped as the discount code on a checkout
+    // link so an inbound order carrying it can be matched back to this thread.
+    attributionCode: text(),
     lastMessageAt: timestamp({ withTimezone: true }),
     createdAt: createdAt(),
   },
@@ -48,6 +51,9 @@ export const conversations = pgTable(
     index("conversations_brand_status_idx").on(t.brandId, t.status),
     index("conversations_brand_last_message_idx").on(t.brandId, t.lastMessageAt),
     index("conversations_customer_idx").on(t.customerId),
+    uniqueIndex("conversations_brand_attribution_code_uniq")
+      .on(t.brandId, t.attributionCode)
+      .where(sql`${t.attributionCode} is not null`),
   ],
 );
 
