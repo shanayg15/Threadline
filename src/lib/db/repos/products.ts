@@ -8,9 +8,25 @@ export type Product = typeof products.$inferSelect;
 export type NewProduct = typeof products.$inferInsert;
 export type ProductVariant = typeof productVariants.$inferSelect;
 export type NewProductVariant = typeof productVariants.$inferInsert;
+export type ProductWithVariants = { product: Product; variants: ProductVariant[] };
 
 export async function list(brandId: string): Promise<Product[]> {
   return db.select().from(products).where(eq(products.brandId, brandId));
+}
+
+/** Products with their variants (Products read page). Two queries, grouped in JS. */
+export async function listWithVariants(brandId: string): Promise<ProductWithVariants[]> {
+  const [prods, allVariants] = await Promise.all([
+    list(brandId),
+    db.select().from(productVariants).where(eq(productVariants.brandId, brandId)),
+  ]);
+  const byProduct = new Map<string, ProductVariant[]>();
+  for (const v of allVariants) {
+    const arr = byProduct.get(v.productId) ?? [];
+    arr.push(v);
+    byProduct.set(v.productId, arr);
+  }
+  return prods.map((product) => ({ product, variants: byProduct.get(product.id) ?? [] }));
 }
 
 export async function getById(brandId: string, id: string): Promise<Product | undefined> {

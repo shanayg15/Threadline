@@ -1,22 +1,44 @@
-import { Box } from "lucide-react";
-
-import { EmptyState } from "@/components/empty-state";
+import { getActiveBrand } from "@/lib/auth/brand";
+import * as products from "@/lib/db/repos/products";
+import { PageContainer } from "@/components/page-container";
 import { PageHeader } from "@/components/page-header";
 
-export const metadata = { title: "Products — Threadline" };
+import { ProductsClient, type ProductRow } from "./products-client";
 
-export default function ProductsPage() {
+export const metadata = { title: "Products — Threadline" };
+export const dynamic = "force-dynamic";
+
+export default async function ProductsPage() {
+  const { brandId, role } = await getActiveBrand();
+  const rows = await products.listWithVariants(brandId);
+
+  // Serialize to a plain, client-safe shape (Dates → ISO strings).
+  const data: ProductRow[] = rows.map(({ product, variants }) => ({
+    id: product.id,
+    title: product.title,
+    description: product.description,
+    fitNotes: product.fitNotes,
+    status: product.status,
+    updatedAt: product.updatedAt.toISOString(),
+    variants: variants.map((v) => ({
+      id: v.id,
+      title: v.title,
+      sku: v.sku,
+      priceCents: v.priceCents,
+      inventoryQty: v.inventoryQty,
+      options: v.options,
+    })),
+  }));
+
   return (
-    <div className="space-y-6">
+    <PageContainer>
       <PageHeader
         title="Products"
-        description="Your catalog and the fit notes that ground answers."
+        description="Edit fit notes to sharpen the agent's answers."
       />
-      <EmptyState
-        icon={Box}
-        title="The products table arrives in M7"
-        description="Catalog rows with editable fit notes / agent metadata — the detail that makes the concierge's answers good. Synced in M4."
-      />
-    </div>
+      <div className="mt-6">
+        <ProductsClient data={data} canEdit={role !== "viewer"} />
+      </div>
+    </PageContainer>
   );
 }

@@ -1,12 +1,13 @@
 import { and, desc, eq } from "drizzle-orm";
 
 import { db } from "@/lib/db/client";
-import { orderLineItems, orders } from "@/lib/db/schema";
+import { customers, orderLineItems, orders } from "@/lib/db/schema";
 import { one } from "./_util";
 
 export type Order = typeof orders.$inferSelect;
 export type NewOrder = typeof orders.$inferInsert;
 export type NewOrderLineItem = typeof orderLineItems.$inferInsert;
+export type OrderWithCustomer = Order & { customerName: string | null; phoneE164: string };
 
 export async function list(brandId: string): Promise<Order[]> {
   return db
@@ -14,6 +15,21 @@ export async function list(brandId: string): Promise<Order[]> {
     .from(orders)
     .where(eq(orders.brandId, brandId))
     .orderBy(desc(orders.createdAt));
+}
+
+/** Orders joined to their customer (for the Orders read page). */
+export async function listWithCustomer(brandId: string): Promise<OrderWithCustomer[]> {
+  const rows = await db
+    .select({ order: orders, customer: customers })
+    .from(orders)
+    .innerJoin(customers, eq(customers.id, orders.customerId))
+    .where(eq(orders.brandId, brandId))
+    .orderBy(desc(orders.createdAt));
+  return rows.map((r) => ({
+    ...r.order,
+    customerName: r.customer.name,
+    phoneE164: r.customer.phoneE164,
+  }));
 }
 
 export async function listForCustomer(brandId: string, customerId: string): Promise<Order[]> {

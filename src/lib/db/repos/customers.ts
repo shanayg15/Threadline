@@ -1,11 +1,23 @@
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 
 import { db } from "@/lib/db/client";
-import { customers, type consentStatus, type experimentGroup } from "@/lib/db/schema";
+import {
+  conversations,
+  customers,
+  orders,
+  type consentStatus,
+  type experimentGroup,
+} from "@/lib/db/schema";
 import { one } from "./_util";
 
 export type Customer = typeof customers.$inferSelect;
 export type NewCustomer = typeof customers.$inferInsert;
+export type CustomerWithStats = {
+  customer: Customer;
+  orderCount: number;
+  lastContactAt: Date | null;
+  conversationId: string | null;
+};
 
 type ConsentStatus = (typeof consentStatus.enumValues)[number];
 type ExperimentGroup = (typeof experimentGroup.enumValues)[number];
@@ -36,6 +48,42 @@ export async function getById(brandId: string, id: string): Promise<Customer | u
 
 export async function list(brandId: string): Promise<Customer[]> {
   return db.select().from(customers).where(eq(customers.brandId, brandId));
+}
+
+/** Customers + order count, last contact time, and a conversation to link to (Customers
+ * read page). A few aggregate queries assembled in JS — no N+1. */
+export async function listWithStats(brandId: string): Promise<CustomerWithStats[]> {
+  const [custs, orderCounts, convs] = await Promise.all([
+    list(brandId),
+    db
+      .select({ customerId: orders.customerId, count: sql<number>`count(*)::int` })
+      .from(orders)
+      .where(eq(orders.brandId, brandId))
+      .groupBy(orders.customerId),
+    db
+      .select({
+        id: conversations.id,
+        customerId: conversations.customerId,
+        lastMessageAt: conversations.lastMessageAt,
+      })
+      .from(conversations)
+      .where(eq(conversations.brandId, brandId))
+      .orderBy(desc(conversations.lastMessageAt)),
+  ]);
+
+  const countByCustomer = new Map(orderCounts.map((r) => [r.customerId, r.count]));
+  const latestConvo = new Map<string, { id: string; lastMessageAt: Date | null }>();
+  for (const c of convs) if (!latestConvo.has(c.customerId)) latestConvo.set(c.customerId, c);
+
+  return custs.map((customer) => {
+    const convo = latestConvo.get(customer.id);
+    return {
+      customer,
+      orderCount: countByCustomer.get(customer.id) ?? 0,
+      lastContactAt: convo?.lastMessageAt ?? null,
+      conversationId: convo?.id ?? null,
+    };
+  });
 }
 
 /** Insert or update a customer keyed by (brandId, phoneE164). */
