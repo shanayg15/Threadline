@@ -13,13 +13,24 @@ compliance, human handoff, and honest lift-vs-holdout measurement.
 
 ## Status
 
-Built milestone-by-milestone, and **the V1 is complete (M1–M8)**: foundation; data model
+Built milestone-by-milestone, and **complete (M1–M9)**: foundation; data model
 & database; auth & dashboard shell; Shopify sync & embeddings; channel layer & compliance
 middleware; agent engine, core loop & eval harness; the operating console (Conversations,
-handoff, read pages, onboarding & settings); and the lifecycle engine, confirmation gates
-& attribution. The remaining milestone is the public marketing site (M9). See
+handoff, read pages, onboarding & settings); the lifecycle engine, confirmation gates
+& attribution (end of M8 = the usable V1); and the public marketing/landing site (M9). See
 [`CLAUDE.md`](./CLAUDE.md) for the architecture, conventions, and the hard safety
 invariants every milestone obeys.
+
+**The marketing site (M9).** A fast, static public site under `src/app/(marketing)/`
+(excluded from auth) — a sticky header, a hero with an animated SMS phone-thread mock,
+an integrations strip, the Question → Order → Delivery → Next purchase lifecycle, the
+eight playbooks, a "fill the gap" comparison, a faithful static recreation of the real
+console, honest (illustrative-only) social proof, a markdown blog, an FAQ, and SEO basics
+(metadata, OG/Twitter image, sitemap, robots). It clones the reference _information
+architecture_ only — the brand, copy, imagery, and identity are entirely Threadline's,
+with no invented metrics, customers, or affiliations, and channels described honestly
+(SMS/MMS today; RCS, WhatsApp & iMessage on the roadmap). The primary CTA drives to
+`/signup`; "Book a demo" is configurable via `NEXT_PUBLIC_BOOK_A_DEMO_URL`.
 
 **The proactive engine + confirmation gate (M8).** A separate worker (`pnpm worker`,
 BullMQ on Redis) runs the lifecycle: a delivered order (real tracking or a conservative

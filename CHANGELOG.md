@@ -4,6 +4,46 @@ All notable changes to Threadline are documented here. The project is built
 milestone-by-milestone toward a usable V1; each milestone is a self-contained,
 verified increment.
 
+## M9 — Marketing / Landing Site
+
+The public face of the product — a fast, static, accessible marketing site that clones
+the reference site's **information architecture** in **Threadline's own brand, copy, and
+identity**. M1–M9 complete.
+
+### Added
+
+- **Public `(marketing)` site** (`src/app/(marketing)/`, excluded from the auth
+  middleware): a sticky, scroll-aware header with a mobile sheet menu; a hero with an
+  animated, `prefers-reduced-motion`-aware SMS phone-thread mock cycling original demo
+  conversations; a channel-honest integrations strip; the Question → Order → Delivery →
+  Next purchase lifecycle timeline; the eight-playbook campaigns grid; a "fill the gap"
+  comparison table; a faithful **static recreation of the real M7 console** (in our brand,
+  "Demo Apparel Co", real `Delivered`/`Sent` status — never a fake "Read"); honest,
+  clearly-labeled **illustrative-only** social proof; a final CTA band; and a footer with
+  the open-source/GitHub line and our copyright (no YC badge).
+- **Markdown blog** (`/blog` + `/blog/[slug]`): a filesystem-backed reader (`gray-matter`
+  + `react-markdown`) with three original posts, styled with our own typography.
+- **Contact + placeholder legal pages** (`/contact`, `/privacy`, `/terms`). The primary
+  CTA drives to `/signup`; "Book a demo" is configurable via `NEXT_PUBLIC_BOOK_A_DEMO_URL`
+  (defaults to `/contact`).
+- **SEO**: per-page metadata, a brand-generated Open Graph / Twitter image
+  (`next/og`, no external asset), `robots.txt`, and `sitemap.xml`.
+
+### Guardrail
+
+- Clones the reference **IA only**. Original copy throughout; our coral-on-cream identity
+  (not the reference's serif-on-slate or bird logo); **no fabricated metrics, customers,
+  testimonials, or affiliations**; channels described honestly (SMS/MMS today; RCS,
+  WhatsApp & iMessage on the roadmap). A repo grep confirms zero occurrences of the
+  reference brand name, its taglines, `51%`, or "Y Combinator" in the marketing code.
+
+### Note
+
+- This commit set also includes outstanding M8 lifecycle/console code (e.g.
+  `orders.listDeliverable`/`setDeliveredAt`) that the worker referenced but that had been
+  left out of the original M8 commit — committed here so `main` builds with the full M8
+  feature set.
+
 ## M8 — Lifecycle Engine, Confirmation Gates, Attribution & Analytics
 
 The product becomes proactive and safe to transact — **the usable V1**.

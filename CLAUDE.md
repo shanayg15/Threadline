@@ -82,7 +82,14 @@ worker`): heuristic delivery → event → playbook → quiet-hours-gated proact
    (unambiguous YES → customer-paid Shopify **checkout link**, never a charge;
    modify/unclear never execute), experiment groups + assist-based attribution, and a
    basic Analytics page. **End of M8 = the usable V1.** ✅
-9. Marketing / landing site
+9. **Marketing / landing site** — the public `(marketing)` site (kept out of the auth
+   middleware): sticky header, hero with an animated SMS phone-thread mock, integrations
+   strip, lifecycle timeline, eight-campaign grid, "fill the gap" comparison, a static
+   recreation of the real M7 console, honest (illustrative-only) social proof, a
+   markdown blog (`/blog` + `/blog/[slug]`), an FAQ accordion, and SEO basics (metadata,
+   OG/Twitter image, robots, sitemap). Clones the reference IA only — **our** brand, copy,
+   and identity; no lifted metrics, customers, or affiliations; channels described
+   honestly (SMS/MMS today, the rest on the roadmap). ✅ **M1–M9 complete.**
 
 ## Out of scope (by design)
 
