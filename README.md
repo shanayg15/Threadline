@@ -1,195 +1,232 @@
+<div align="center">
+
 # Threadline
 
-**An open-source, SMS-first post-purchase concierge for Shopify DTC brands.**
+### SMS-first post-purchase concierge for Shopify DTC brands
 
-Threadline runs one persistent text thread per customer, powered by an AI agent
-grounded in your live Shopify catalog, policies, and order history. It answers fit
-and policy questions before checkout, then follows up after delivery to turn
-returns into exchanges and one-time buyers into regulars — with deterministic
-compliance, human handoff, and honest lift-vs-holdout measurement.
+Run one persistent text thread per customer, grounded in your live Shopify catalog, policies, and order history. An AI agent answers fit and policy questions, then follows up after delivery to turn returns into exchanges and one-time buyers into regulars — with deterministic compliance, human handoff, and honest lift-vs-holdout measurement built in.
 
-> Open source (MIT). This project clones an **idea, not a brand** — all names,
-> copy, and UI are original.
+<br/>
 
-## Status
+[![License: MIT](https://img.shields.io/badge/License-MIT-E8623A?style=for-the-badge)](LICENSE)
+[![Next.js 16](https://img.shields.io/badge/Next.js-16-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)](https://nextjs.org)
+[![TypeScript strict](https://img.shields.io/badge/TypeScript-strict-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![Postgres + pgvector](https://img.shields.io/badge/Postgres-pgvector-1F2937?style=for-the-badge&logo=postgresql&logoColor=white)](https://github.com/pgvector/pgvector)
 
-Built milestone-by-milestone, and **complete (M1–M9)**: foundation; data model
-& database; auth & dashboard shell; Shopify sync & embeddings; channel layer & compliance
-middleware; agent engine, core loop & eval harness; the operating console (Conversations,
-handoff, read pages, onboarding & settings); the lifecycle engine, confirmation gates
-& attribution (end of M8 = the usable V1); and the public marketing/landing site (M9). See
-[`CLAUDE.md`](./CLAUDE.md) for the architecture, conventions, and the hard safety
-invariants every milestone obeys.
+[![runs with zero API keys](https://img.shields.io/badge/runs_with-zero_API_keys-E8623A?style=for-the-badge)](#quickstart)
+[![compliance deterministic](https://img.shields.io/badge/compliance-deterministic-1F2937?style=for-the-badge)](#how-it-works)
+[![guardrail evals](https://img.shields.io/badge/guardrails-Promptfoo-7C5C3E?style=for-the-badge)](#verification)
+[![self-hostable](https://img.shields.io/badge/self--hostable-yes-4B5563?style=for-the-badge)](#going-live)
 
-**The marketing site (M9).** A fast, static public site under `src/app/(marketing)/`
-(excluded from auth) — a sticky header, a hero with an animated SMS phone-thread mock,
-an integrations strip, the Question → Order → Delivery → Next purchase lifecycle, the
-eight playbooks, a "fill the gap" comparison, a faithful static recreation of the real
-console, honest (illustrative-only) social proof, a markdown blog, an FAQ, and SEO basics
-(metadata, OG/Twitter image, sitemap, robots). It clones the reference _information
-architecture_ only — the brand, copy, imagery, and identity are entirely Threadline's,
-with no invented metrics, customers, or affiliations, and channels described honestly
-(SMS/MMS today; RCS, WhatsApp & iMessage on the roadmap). The primary CTA drives to
-`/signup`; "Book a demo" is configurable via `NEXT_PUBLIC_BOOK_A_DEMO_URL`.
+<br/>
 
-**The proactive engine + confirmation gate (M8).** A separate worker (`pnpm worker`,
-BullMQ on Redis) runs the lifecycle: a delivered order (real tracking or a conservative
-heuristic) → a post-delivery **check-in**, sent only to opted-in **treatment** customers
-at a quiet-hours-respecting time — the **control** group is a true holdout and is never
-messaged (checked at scheduling _and_ at send). When the agent proposes a side effect, the
-confirmation gate executes it **only** on an unambiguous "yes" — money flows through a
-Shopify **checkout link the customer pays** (never a card charge); "yes but in navy"
-re-proposes and "maybe" asks to clarify. Orders are attributed back to the conversation
-that drove them, feeding an honest, **assist-based** Analytics page (with treatment/holdout
-counts — incremental lift is a later phase). Every send and execution is audited; jobs are
-idempotent.
+[Quickstart](#quickstart) · [How it works](#how-it-works) · [Verification](#verification) · [Going live](#going-live) · [Documentation](#documentation)
 
-**The console.** A three-pane **Conversations** surface — a filterable inbox, an
-iMessage-style thread (saturated outbound bubbles with the real **delivery** status —
-never a fake "read" receipt), and live polling — with human handoff (AI⇄Human, Pause,
-Resolve), a compliance-gated composer (a human can't text an opted-out number either),
-and a supervised-mode **Approve / Edit / Reject** bar on held agent drafts. Plus
-Customers, Orders, Products (with `fitNotes` editing that re-embeds), a 6-tab Settings,
-and a guided onboarding wizard — all brand-scoped from the session.
+</div>
 
-**Keyless dev:** without Shopify/OpenAI/Anthropic/Twilio credentials, the app falls
-back to a fixture-backed mock commerce provider, a deterministic local embedder
-(`EMBEDDINGS_PROVIDER=local`), a mocked SMS send (`SEND_REAL_SMS=false` — the
-default), and a **deterministic stub agent**, so the whole pipeline — inbound →
-compliance → agent → reply — runs end-to-end. Compliance (STOP/HELP/START, quiet
-hours, consent, frequency caps) is **deterministic TypeScript, never the LLM**, with
-an exhaustive test suite. Set the real `SHOPIFY_*` / `OPENAI_API_KEY` /
-`ANTHROPIC_API_KEY` / `TWILIO_*` (+ `SEND_REAL_SMS=true`) to use the live integrations
-and the real Claude agent.
+---
+
+DTC brands blast one-way broadcast SMS that customers tune out, mark as spam, and unsubscribe from. The post-purchase moment — the days between "order placed" and "is this the right size?" — is where exchanges, reorders, and saved customers actually live, and a broadcast can't hold a conversation. Threadline replaces the blast with one ongoing thread per customer, handled by an agent grounded in your real store. The model is roughly five percent of the work. Grounding, compliance, and honest measurement are the product. This clones an **idea, not a brand** — all names, copy, and UI are original.
+
+## What it does
+
+- **Holds one thread per customer.** A single persistent two-way SMS/MMS conversation, in the brand's voice, that answers pre-purchase questions and proactively follows up after delivery — no broadcast, no one-off campaigns.
+- **Stays grounded in your live store.** Stock and price come from **live Shopify tool calls at answer time**, never from a snapshot or RAG. Policy answers come only from the brand's own policies. The agent never invents promo codes, discounts, or promises.
+- **Never acts without a yes.** Side effects (place order, exchange, checkout link) are **propose-only**: the agent creates a pending action and asks the customer to confirm. On an unambiguous "yes" the confirmation gate executes it via a customer-paid Shopify checkout link — **never** a card-on-file charge. "Yes but in navy" re-proposes; "maybe" asks to clarify.
+- **Keeps compliance out of the model's hands.** STOP/HELP/START, quiet hours, consent, and frequency caps are **deterministic TypeScript decided before the LLM is ever called** — with an exhaustive test suite. A human composer is gated by the same rules: you can't text an opted-out number either.
+- **Hands off to humans cleanly.** A three-pane console with AI⇄Human handoff, Pause/Resolve, and a supervised **Approve / Edit / Reject** bar on held agent drafts, with real SMS **delivery** status (never a fake "read" receipt).
+- **Measures honestly.** A proactive post-delivery check-in goes only to opted-in **treatment** customers; the **control** group is a true holdout and is never messaged (enforced at scheduling *and* at send). Orders are attributed back to the conversation that drove them, feeding an assist-based Analytics page with treatment/holdout counts.
+- **Multi-tenant from the first row.** Every domain row carries a `brand_id`; every query is brand-scoped from the session. Integration credentials are encrypted at rest; audit and consent logs are append-only.
+
+## Quickstart
+
+Threadline runs **with zero API keys**. Without Shopify, Anthropic, OpenAI, or Twilio credentials it falls back to a fixture-backed mock commerce provider, a deterministic local embedder, mocked SMS sends, and a deterministic stub agent — so the whole pipeline (inbound → compliance → agent → reply, plus the proactive lifecycle) runs end-to-end on a fresh clone.
+
+Prerequisites: [Node 20+](https://nodejs.org), [pnpm 9+](https://pnpm.io), and Docker (for Postgres + Redis).
 
 ```bash
-pnpm tsx src/lib/commerce/sync-cli.ts <brandId>     # sync catalog/customers/orders
-pnpm tsx src/lib/embeddings/embed-cli.ts <brandId>  # build the pgvector knowledge base
-pnpm eval                                           # run the agent guardrail evals
-```
-
-> **The agent.** On a cleared inbound, a grounded agent answers in the brand's voice:
-> stock/price come from **live** Shopify tool calls (never RAG), policy answers come
-> only from the brand's policies, and side effects (place order / exchange / checkout
-> link) are **propose-only** — a pending action is created and the customer is asked to
-> confirm. On an unambiguous "yes" the confirmation gate executes it via a customer-paid
-> Shopify checkout link (never a card charge); on "maybe"/"yes but…" it asks or
-> re-proposes. It escalates to a human on "talk to a person", confusion, or low
-> confidence, and a deterministic **critique gate** blocks any "I've placed/charged"
-> claim or invented promo before a reply is sent. The agent is fail-safe and runs off
-> the webhook asynchronously, so a model error can never break inbound handling.
-
-## Tech stack
-
-Next.js 16 (App Router, TypeScript strict) · Postgres 16 + pgvector · Drizzle ORM ·
-Redis + BullMQ · Auth.js v5 · Tailwind CSS + shadcn/ui · Vercel AI SDK + Anthropic
-(Claude) · Twilio (SMS/MMS) · Promptfoo (evals) · Langfuse (tracing).
-
-A single Next.js app serves the dashboard, API, and webhooks; a separate worker
-process runs background jobs. External services sit behind swappable adapters.
-
-## Brand
-
-Threadline uses its own visual identity, deliberately distinct from the reference
-product:
-
-- **Primary color:** Threadline Coral `#E8623A` (warm terracotta), over warm-stone
-  neutrals — not a cool slate.
-- **Typeface:** [Plus Jakarta Sans](https://fonts.google.com/specimen/Plus+Jakarta+Sans)
-  for UI, [JetBrains Mono](https://fonts.google.com/specimen/JetBrains+Mono) for code.
-
-Tokens live in [`src/app/globals.css`](./src/app/globals.css) and
-[`tailwind.config.ts`](./tailwind.config.ts) (light + dark).
-
-**Console shell:** a persistent 240px left nav rail (icon + label, with a filled
-coral active pill) that collapses into a Sheet on mobile, and a 64px top bar with a
-`/ {Brand}` breadcrumb, an avatar dropdown, and a "DEV — SMS mocked" badge. Content
-sits in a max-width 6xl container with a consistent `PageHeader` per page. Type
-scale: page titles `text-2xl` semibold, body `text-sm`; spacing on a 4px grid
-(`gap`/`p` multiples of 4); rounded-`lg`/`xl` surfaces matching the `0.65rem` token
-radius.
-
-## Prerequisites
-
-- **Node 20+**, **pnpm 9+**
-- **Docker + Docker Compose**
-
-## Quick start
-
-```bash
-# 1. Start Postgres (pgvector) + Redis
-docker compose up -d
-
-# 2. Install dependencies
+git clone https://github.com/shanayg15/Threadline.git && cd Threadline
 pnpm install
 
-# 3. Configure environment
-cp .env.example .env
-#    Generate secrets and paste them into .env:
-#      openssl rand -base64 32   # -> AUTH_SECRET
-#      openssl rand -base64 32   # -> ENCRYPTION_KEY (must decode to 32 bytes)
-#    For local M1/M2 you only need DATABASE_URL, REDIS_URL, AUTH_SECRET, ENCRYPTION_KEY.
+docker compose up -d        # Postgres 16 + pgvector and Redis
+cp .env.example .env        # see below — only 4 vars needed to start
 
-# 4. Create the schema (runs the pgvector extension migration first) and seed
-#    a demo brand with catalog, customers and orders.
-pnpm db:migrate
-pnpm db:seed
+pnpm db:migrate             # enables pgvector, then creates the schema
+pnpm db:seed                # a demo brand with catalog, customers, and orders
 
-# 5. Run the app and (in another shell) the worker
-pnpm dev
-pnpm worker
+pnpm dev                    # app at http://localhost:3000
+pnpm worker                 # (in a second shell) the lifecycle worker
 ```
 
-> The schema is provisioned via `pnpm db:migrate` because the first migration
-> enables the pgvector extension, which a bare `db:push` cannot do on a fresh
-> database. Once migrated, `pnpm db:push` is fine for quick iteration.
+For a local keyless run you only need four values in `.env` — `DATABASE_URL`, `REDIS_URL`, `AUTH_SECRET`, and `ENCRYPTION_KEY`:
 
-Then open <http://localhost:3000>. Check service health at
-<http://localhost:3000/api/health> — it returns `200` only when both Postgres and
-Redis answer, `503` otherwise.
-
-> **Local port note:** `docker-compose.yml` maps Postgres to host port **5434**
-> (not the default 5432) so it can coexist with other local Postgres instances. The
-> `DATABASE_URL` in `.env.example` already points at `5434`; change both together if
-> you remap it. Redis uses `6379`.
-
-## Scripts
-
-| Script                              | Description                          |
-| ----------------------------------- | ------------------------------------ |
-| `pnpm dev`                          | Run the Next.js app (dev)            |
-| `pnpm build` / `pnpm start`         | Production build / serve             |
-| `pnpm worker`                       | Run the background worker            |
-| `pnpm db:generate`                  | Generate Drizzle migrations (M2+)    |
-| `pnpm db:migrate` / `pnpm db:push`  | Apply migrations / push schema (M2+) |
-| `pnpm db:seed`                      | Seed the demo brand fixture (M2+)    |
-| `pnpm test` / `pnpm test:watch`     | Run Vitest                           |
-| `pnpm eval`                         | Run the agent guardrail evals (M6)   |
-| `pnpm lint` / `pnpm typecheck`      | ESLint / `tsc --noEmit`              |
-| `pnpm format` / `pnpm format:check` | Prettier write / check               |
-
-## Project structure
-
-```
-src/
-  app/
-    (marketing)/        # public landing (this milestone)
-    (dashboard)/        # authed console — M3/M7
-    onboarding/         # onboarding flow — M7
-    login/  signup/     # auth pages — M3
-    api/health/         # readiness probe
-  lib/
-    config/env.ts       # zod-validated, typed env loader
-    db/                 # Drizzle client (schema + repos in M2)
-    auth commerce embeddings channels compliance agent tracking jobs slack
-  components/ui/        # shadcn/ui primitives
-  types/
-worker/                 # background worker entry (BullMQ in M8)
-evals/                  # Promptfoo cases (M6)
-drizzle/                # generated migrations (M2)
-docker-compose.yml      # Postgres + pgvector, Redis
+```bash
+openssl rand -base64 32     # -> AUTH_SECRET
+openssl rand -base64 32     # -> ENCRYPTION_KEY (must decode to 32 bytes)
 ```
 
-## License
+What you will see:
 
-[MIT](./LICENSE) © 2026 Shanay Gaitonde
+- `pnpm dev` serves the full console on the seeded brand — Conversations, Customers, Orders, Products, Analytics, and Settings, plus the public marketing site.
+- `pnpm worker` runs the BullMQ lifecycle: a delivered order schedules a treatment-only, quiet-hours-respecting check-in.
+- `pnpm eval` runs the agent guardrail evals; `pnpm test` runs the Vitest suite (compliance, channels, agent gate, attribution).
+
+Service health is at <http://localhost:3000/api/health> — it returns `200` only when both Postgres and Redis answer, `503` otherwise.
+
+> **Local port note:** `docker-compose.yml` maps Postgres to host port **5434** (not the default 5432) so it can coexist with other local Postgres instances. The `DATABASE_URL` in `.env.example` already points at `5434`; change both together if you remap it. Redis uses `6379`. The first schema setup uses `pnpm db:migrate` (not `db:push`) because the first migration enables the pgvector extension; once migrated, `pnpm db:push` is fine for quick iteration.
+
+## Bring your own keys
+
+To use the real integrations and the real Claude agent, connect services and flip a couple of env values. Shopify and Twilio credentials are entered in **Settings → Integrations** and stored encrypted at rest (AES-256-GCM); model and embedding keys live in `.env`.
+
+| What it turns on | How |
+|---|---|
+| **Real Claude agent** | set `ANTHROPIC_API_KEY` and pick `AGENT_MODEL` (Opus, Sonnet, or Haiku). Without it, the deterministic stub agent runs. |
+| **Real embeddings** | set `EMBEDDINGS_PROVIDER=openai` (or `voyage`) and the matching key. `local` is a deterministic offline default. |
+| **Live Shopify catalog** | add the store credentials in Settings → Integrations, then sync (below). |
+| **Real outbound SMS** | add Twilio credentials and set `SEND_REAL_SMS=true` — a hard gate that defaults `false`, so nothing leaves your machine until you opt in against a verified number. |
+
+```bash
+pnpm tsx src/lib/commerce/sync-cli.ts <brandId>     # sync catalog, customers, orders
+pnpm tsx src/lib/embeddings/embed-cli.ts <brandId>  # build the pgvector knowledge base
+```
+
+## Going live
+
+The full environment template is `.env.example`. The variables that matter most:
+
+| Variable | Purpose | Where to get it |
+|---|---|---|
+| `DATABASE_URL` / `REDIS_URL` | Postgres + pgvector and Redis | Docker Compose (provided) |
+| `AUTH_SECRET` / `ENCRYPTION_KEY` | session signing and credential encryption | `openssl rand -base64 32` |
+| `ANTHROPIC_API_KEY` + `AGENT_MODEL` | Claude for the agent | [console.anthropic.com](https://console.anthropic.com) |
+| `OPENAI_API_KEY` | embeddings (when `EMBEDDINGS_PROVIDER=openai`) | [platform.openai.com](https://platform.openai.com) |
+| `TWILIO_*` + `SEND_REAL_SMS` | live SMS/MMS send and receive | [twilio.com](https://www.twilio.com) |
+| `SHOPIFY_*` | store catalog, orders, and webhooks | a Shopify custom app |
+| `SLACK_WEBHOOK_URL` | escalation notifications | optional |
+| `LANGFUSE_*` | agent tracing | optional |
+
+**Verify the live paths** once keys are in place:
+
+```bash
+pnpm typecheck && pnpm lint && pnpm test && pnpm eval
+```
+
+**Approval gate.** Outbound proactive messages are gated on consent, quiet hours, frequency caps, and experiment group, and held drafts wait for a human Approve/Edit/Reject in supervised mode. The control group is a true holdout and is never messaged. There is no auto-charge and no blast, by design.
+
+## How it works
+
+```
+            Customer  ⇄  one persistent SMS / MMS thread  ⇄  Threadline
+
+   INBOUND (reactive)                         OUTBOUND (proactive)
+   ──────────────────                         ────────────────────
+   Twilio webhook                             Shopify / tracking webhook
+        │                                          │  order delivered
+        v                                          v
+   Compliance middleware                      Event → BullMQ queue → scheduler
+   STOP/HELP/START · quiet hours               picks a declarative playbook
+   consent · frequency caps                         │
+   (deterministic TS, never the LLM)          gate: consent · quiet hours ·
+        │  cleared                            frequency cap · experiment group
+        v                                      treatment only — control = true holdout
+   Agent engine                                     │
+   live Shopify tools + RAG + critique        composer → (supervised approval)
+        │                                            │
+        └─────────────────┬──────────────────────────┘
+                          v
+            Pending-action confirmation gate
+   unambiguous "yes" → customer-paid Shopify checkout link (never a card charge)
+                          │
+                          v
+   Reply sent · every send & execution audited (append-only) · order attributed → Analytics
+```
+
+The safety layer is the product, built from the first commit, and enforced in code rather than trusted to the model:
+
+1. **Compliance is deterministic code, never the LLM** — decided in middleware before the model is called.
+2. **Stock and price are always live Shopify calls at answer time**, never from RAG or a snapshot.
+3. **No card-on-file charging.** Money flows through customer-paid Shopify checkout links, behind the pending-action gate's explicit in-thread "yes".
+4. **`SEND_REAL_SMS` defaults `false`** — outbound is mocked and logged in dev until you explicitly enable it.
+5. **Evals gate prompt changes** — guardrail cases run on every agent or prompt edit.
+6. **Multi-tenant from the start** — every row carries `brand_id`; `brandId` is the first argument of every repository function.
+7. **Open-source hygiene** — no hardcoded secrets, credentials encrypted at rest, money stored in integer cents, audit and consent logs append-only.
+
+A deterministic **critique gate** is the last line: it blocks any "I've placed/charged…" claim or invented promo before a reply is ever sent, and the agent runs off the webhook asynchronously so a model error can never break inbound handling.
+
+## Verification
+
+You cannot prove a conversational agent is well-behaved by reading the prompt, so the guardrail evals are the evidence. Each golden case in [`evals/cases.ts`](evals/cases.ts) drives the agent against in-memory fixtures (a brand, catalog, and orders — no DB) and asserts properties that must hold for *any* model:
+
+```text
+$ pnpm eval
+  ✓ stock/price answers come from the live read (get_variant_live), never RAG
+  ✓ purchase/exchange is propose-only — a pending action, nothing executed
+  ✓ "talk to a person" / frustration escalates to a human
+  ✓ policy answers come from brand policies; promos are never invented
+  ✓ global guard: no "I've placed/charged" claim, no promo code, no banned phrase
+```
+
+By default (no `ANTHROPIC_API_KEY`) the evals run against the deterministic stub model, so the loop and guardrail wiring are proven anywhere — a CI smoke gate. With a key, the same cases run against the real Claude model, exercising the actual system prompt; that is the real gate for prompt changes. `pnpm test` runs the Vitest suite covering deterministic compliance, the channel layer, the confirmation gate, and attribution.
+
+## Stack
+
+| Concern | Choice |
+|---|---|
+| App, API, dashboard, webhooks | Next.js 16 (App Router), React 19 |
+| Worker | a separate Node process, BullMQ on Redis |
+| Language | TypeScript, strict + `noUncheckedIndexedAccess`. One language, one deploy |
+| Database | Postgres 16 + pgvector, Drizzle ORM and migrations |
+| Auth | Auth.js v5 (next-auth), brand-scoped sessions |
+| LLM | Claude via the Vercel AI SDK, behind a swappable model interface with a deterministic stub |
+| Embeddings | swappable `Embedder`: OpenAI (default), Voyage, or a local deterministic embedder |
+| SMS / MMS | Twilio behind a channel adapter (mocked in dev) |
+| Commerce | Shopify Admin API behind a commerce adapter (fixture-backed mock in dev) |
+| Tracking | heuristic (default) or EasyPost |
+| UI | Tailwind CSS + shadcn/ui (Radix primitives) |
+| Evals | Promptfoo guardrail cases |
+| Tracing | Langfuse (optional) |
+| Validation | Zod, which also constrains the LLM JSON output |
+
+The only non-open-source pieces — the model, embeddings, SMS, and commerce — sit behind interfaces with local fallbacks, so a fully keyless run is real rather than a footnote.
+
+## Repo layout
+
+```
+drizzle/          generated SQL migrations (pgvector enabled first)
+evals/            Promptfoo guardrail cases, fixtures, harness, runner
+worker/           background worker entry (BullMQ lifecycle scheduler)
+src/app/
+  (marketing)/    public landing site (kept out of the auth middleware)
+  (dashboard)/    the console — Conversations, Customers, Orders, Products, Analytics, Settings
+  onboarding/     guided setup wizard
+  api/            health probe, Twilio + Shopify webhooks, conversations
+src/lib/
+  agent/          grounded agent — model, tools, prompt, critique, confirmation gate
+  compliance/     deterministic STOP/HELP/START, quiet hours, consent, frequency caps
+  commerce/       Shopify adapter + fixture-backed mock, catalog/order sync
+  channels/       Twilio SMS/MMS adapter and outbound send
+  embeddings/     pgvector knowledge base (OpenAI · Voyage · local)
+  measure/        experiment groups + assist-based attribution
+  jobs/           BullMQ queues, lifecycle and proactive scheduling
+  db/             Drizzle schema, brand-scoped repositories, seed
+src/components/    shadcn/ui primitives plus console and marketing components
+```
+
+## Documentation
+
+[`CLAUDE.md`](CLAUDE.md) is the source of truth — the architecture, the locked stack, the hard safety invariants, and the milestone history (M1–M9, complete). See also the [evals guide](evals/README.md), the [`CHANGELOG`](CHANGELOG.md), and the markdown blog under [`src/content/blog`](src/content/blog).
+
+## Contributing
+
+Issues and pull requests are welcome. House rules: obey the hard safety invariants in [`CLAUDE.md`](CLAUDE.md) (compliance stays deterministic, stock/price stay live, side effects stay propose-only, no card charging); `pnpm typecheck && pnpm lint && pnpm test && pnpm eval` must pass; keep every query brand-scoped; store money in integer cents; and never commit secrets.
+
+---
+
+<div align="center">
+
+**Threadline** — open source under the [MIT License](LICENSE).
+
+© 2026 Shanay Gaitonde, Sahiel Bose
+
+</div>
