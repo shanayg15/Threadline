@@ -16,7 +16,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
     // h-screen + overflow-hidden so the console (Conversations) can be a full-height
     // three-pane surface with its own internal scrolling; read pages wrap their content
     // in <PageContainer> for normal page scroll.
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-screen overflow-hidden bg-background">
       <Sidebar className="hidden md:flex" />
       <div className="flex min-w-0 flex-1 flex-col">
         <TopBar

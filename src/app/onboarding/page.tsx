@@ -41,11 +41,11 @@ export default async function OnboardingPage() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center px-4 py-12">
+    <div className="flex min-h-screen flex-col items-center bg-background px-4 py-12">
       <BrandLogo className="mb-8" />
       <div className="w-full max-w-2xl space-y-6">
         <div className="space-y-1 text-center">
-          <h1 className="text-2xl font-semibold tracking-tight">
+          <h1 className="font-serif text-3xl font-medium tracking-tight">
             Let&apos;s set up your concierge
           </h1>
           <p className="text-sm text-muted-foreground">
