@@ -10,7 +10,7 @@ export const GITHUB_URL = "https://github.com/shanayg15/Threadline";
 /** Set NEXT_PUBLIC_BOOK_A_DEMO_URL to a scheduling link (Cal.com, etc.) to override. */
 export const BOOK_A_DEMO_URL = process.env.NEXT_PUBLIC_BOOK_A_DEMO_URL || "/contact";
 
-/** Header nav — mirrors the reference IA section set, anchored to our own sections. */
+/** Header nav, anchored to the landing page's own sections. */
 export const NAV_LINKS = [
   { label: "Lifecycle", href: "/#lifecycle" },
   { label: "Product", href: "/#product" },

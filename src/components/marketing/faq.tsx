@@ -57,18 +57,21 @@ const FAQS: { q: string; a: string }[] = [
 
 export function Faq() {
   return (
-    <section id="faq" className="scroll-mt-20 bg-card/30">
-      <div className="mx-auto w-full max-w-3xl px-5 py-20 sm:px-6 lg:py-24">
-        <SectionHeading eyebrow="FAQ" title="Questions, answered" />
+    <section id="faq" className="scroll-mt-20 border-b border-border bg-muted/50">
+      <div className="mx-auto w-full max-w-3xl px-5 py-20 sm:px-8 lg:py-28">
+        <SectionHeading
+          title="Frequently asked questions"
+          lead="How Threadline keeps one conversation open before checkout and after delivery — answered honestly."
+        />
 
-        <div className="mt-10 divide-y rounded-2xl border bg-card">
+        <div className="mt-12 border-t border-border">
           {FAQS.map(({ q, a }) => (
-            <details key={q} className="group px-5 py-1">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-4 font-medium [&::-webkit-details-marker]:hidden">
+            <details key={q} className="group border-b border-border">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-6 py-5 font-serif text-lg font-medium [&::-webkit-details-marker]:hidden">
                 {q}
                 <ChevronDown className="size-5 shrink-0 text-muted-foreground transition-transform duration-200 group-open:rotate-180" />
               </summary>
-              <p className="pb-4 pr-9 text-sm text-muted-foreground">{a}</p>
+              <p className="pb-5 pr-10 text-sm leading-relaxed text-muted-foreground">{a}</p>
             </details>
           ))}
         </div>

@@ -1,7 +1,7 @@
 import Link from "next/link";
 
-import { BrandLogo } from "@/components/brand-logo";
 import { GithubMark } from "@/components/marketing/github-mark";
+import { BrandLogo } from "@/components/brand-logo";
 import { GITHUB_URL } from "@/lib/marketing/config";
 
 const COLUMNS: { heading: string; links: { label: string; href: string }[] }[] = [
@@ -37,8 +37,8 @@ const COLUMNS: { heading: string; links: { label: string; href: string }[] }[] =
 export function MarketingFooter() {
   const year = 2026;
   return (
-    <footer className="border-t bg-card/40">
-      <div className="mx-auto w-full max-w-6xl px-5 py-12 sm:px-6">
+    <footer className="border-t bg-background">
+      <div className="mx-auto w-full max-w-6xl px-5 py-14 sm:px-8">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-5">
           <div className="lg:col-span-2">
             <BrandLogo />

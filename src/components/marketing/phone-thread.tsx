@@ -9,9 +9,9 @@ import { cn } from "@/lib/utils";
  * Animated phone message-thread mock for the hero. Cycles through a few short, original
  * example conversations with fictional demo brands, revealing messages one at a time.
  *
- * Honesty: this is a generic SMS-style thread (our coral identity, not blue iMessage
- * bubbles) — we never label it "iMessage". Respects `prefers-reduced-motion`: with motion
- * reduced we render the first thread in full, statically, and stop rotating.
+ * Honesty: this is a generic SMS-style thread (our own monochrome bubbles) — we never
+ * label it "iMessage". Respects `prefers-reduced-motion`: with motion reduced we render
+ * the first thread in full, statically, and stop rotating.
  */
 
 type Msg = { from: "agent" | "customer"; text: string };

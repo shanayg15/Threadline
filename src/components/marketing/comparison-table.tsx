@@ -1,6 +1,3 @@
-import { Check } from "lucide-react";
-
-import { BrandLogo } from "@/components/brand-logo";
 import { SectionHeading } from "@/components/marketing/section-heading";
 
 const ROWS = [
@@ -38,53 +35,70 @@ const ROWS = [
 
 export function ComparisonTable() {
   return (
-    <section id="compare" className="scroll-mt-20">
-      <div className="mx-auto w-full max-w-6xl px-5 py-20 sm:px-6 lg:py-24">
+    <section id="compare" className="scroll-mt-20 border-b border-border">
+      <div className="mx-auto w-full max-w-6xl px-5 py-20 sm:px-8 lg:py-28">
         <SectionHeading
-          title={<>Keep your stack — Threadline covers what it can&apos;t reach</>}
-          lead="Broadcast tools like Klaviyo and Attentive blast everyone at once. Helpdesks like Gorgias wait for a ticket. Returns portals like Loop kick in once the customer has already given up. Threadline opens a one-to-one text conversation — the part none of those tools are designed to begin."
+          title={
+            <>
+              Keep your stack.
+              <br className="hidden sm:block" /> We cover the gap it leaves open.
+            </>
+          }
+          lead="Broadcast tools like Klaviyo and Attentive blast everyone at once. Helpdesks like Gorgias wait for a ticket. Returns portals like Loop kick in once the customer has already given up. Threadline opens the one-to-one text conversation none of those tools were built to begin."
         />
 
         {/* Desktop: aligned grid */}
-        <div className="mt-12 hidden overflow-hidden rounded-2xl border sm:block">
-          <div className="grid grid-cols-3 border-b bg-card">
-            <div className="p-5" />
-            <div className="p-5 text-sm font-semibold text-muted-foreground">Your stack today</div>
-            <div className="flex items-center gap-2 bg-primary/5 p-5 text-sm font-semibold">
-              <BrandLogo iconOnly />
+        <div className="mt-14 hidden overflow-hidden rounded-lg border border-border sm:block">
+          <div className="grid grid-cols-[1fr_1.4fr_1.4fr]">
+            <div className="border-b border-border p-5" />
+            <div className="border-b border-border p-5 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              Your stack today
+            </div>
+            <div className="border-b border-foreground bg-primary p-5 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-primary-foreground">
               With Threadline
             </div>
+            {ROWS.map((row, i) => {
+              const last = i === ROWS.length - 1;
+              return (
+                <div key={row.aspect} className="contents">
+                  <div
+                    className={`p-5 text-sm font-medium ${last ? "" : "border-b border-border"}`}
+                  >
+                    {row.aspect}
+                  </div>
+                  <div
+                    className={`p-5 text-sm text-muted-foreground ${last ? "" : "border-b border-border"}`}
+                  >
+                    {row.today}
+                  </div>
+                  <div
+                    className={`border-l-2 border-foreground bg-muted/40 p-5 text-sm ${last ? "" : "border-b"}`}
+                  >
+                    {row.threadline}
+                  </div>
+                </div>
+              );
+            })}
           </div>
-          {ROWS.map((row, i) => (
-            <div
-              key={row.aspect}
-              className={`grid grid-cols-3 ${i < ROWS.length - 1 ? "border-b" : ""}`}
-            >
-              <div className="bg-card/40 p-5 text-sm font-semibold">{row.aspect}</div>
-              <div className="p-5 text-sm text-muted-foreground">{row.today}</div>
-              <div className="flex gap-2.5 bg-primary/5 p-5 text-sm">
-                <Check className="mt-0.5 size-4 shrink-0 text-primary" />
-                <span>{row.threadline}</span>
-              </div>
-            </div>
-          ))}
         </div>
 
         {/* Mobile: stacked cards */}
-        <div className="mt-10 space-y-4 sm:hidden">
+        <div className="mt-12 space-y-4 sm:hidden">
           {ROWS.map((row) => (
-            <div key={row.aspect} className="overflow-hidden rounded-xl border">
-              <p className="border-b bg-card p-3 text-sm font-semibold">{row.aspect}</p>
+            <div key={row.aspect} className="overflow-hidden rounded-lg border border-border">
+              <p className="border-b border-border bg-muted/50 p-3 text-sm font-medium">
+                {row.aspect}
+              </p>
               <div className="space-y-3 p-4">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <p className="text-[0.7rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                     Your stack today
                   </p>
                   <p className="mt-1 text-sm text-muted-foreground">{row.today}</p>
                 </div>
-                <div className="rounded-lg bg-primary/5 p-3">
-                  <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-primary">
-                    <Check className="size-3.5" /> With Threadline
+                <div className="border-l-2 border-foreground bg-muted/40 p-3">
+                  <p className="text-[0.7rem] font-semibold uppercase tracking-[0.12em]">
+                    With Threadline
                   </p>
                   <p className="mt-1 text-sm">{row.threadline}</p>
                 </div>

@@ -46,9 +46,9 @@ function Pill({ label, icon: Icon }: { label: string; icon: typeof MessageSquare
 
 export function IntegrationsStrip() {
   return (
-    <section className="border-y bg-card/30">
-      <div className="mx-auto w-full max-w-6xl px-5 py-10 sm:px-6">
-        <p className="text-center text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+    <section className="border-b border-border bg-background">
+      <div className="mx-auto w-full max-w-6xl px-5 py-12 sm:px-8">
+        <p className="text-center text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
           Works with your stack
         </p>
 

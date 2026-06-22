@@ -15,7 +15,7 @@ export function LegalPage({
 }) {
   return (
     <div className="mx-auto w-full max-w-3xl px-5 py-16 sm:px-6 lg:py-20">
-      <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{title}</h1>
+      <h1 className="font-serif text-4xl font-medium tracking-tight sm:text-5xl">{title}</h1>
       <p className="mt-2 text-sm text-muted-foreground">Last updated {updated}</p>
 
       <div className="mt-6 flex items-start gap-3 rounded-xl border border-amber-300/60 bg-amber-50 p-4 text-sm text-amber-900">

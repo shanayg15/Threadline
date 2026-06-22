@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 
 /**
- * Default Open Graph / social image, generated in Threadline's brand (coral on warm cream).
+ * Default Open Graph / social image, generated in Threadline's brand (black on white).
  * No external asset — drawn with inline styles so it stays license-clean. Applies to all
  * routes unless a route exports its own opengraph-image.
  */
@@ -10,10 +10,10 @@ export const alt = "Threadline — the post-purchase text concierge for Shopify 
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-const CREAM = "#FAF6F1";
-const CORAL = "#E8623A";
-const INK = "#1F1B18";
-const MUTED = "#6B625B";
+const PAPER = "#FFFFFF";
+const ACCENT = "#111111";
+const INK = "#0A0A0A";
+const MUTED = "#666666";
 
 export default function OgImage() {
   return new ImageResponse(
@@ -24,7 +24,7 @@ export default function OgImage() {
         display: "flex",
         flexDirection: "column",
         justifyContent: "space-between",
-        backgroundColor: CREAM,
+        backgroundColor: PAPER,
         padding: "72px",
         fontFamily: "sans-serif",
       }}
@@ -36,7 +36,7 @@ export default function OgImage() {
             width: "64px",
             height: "64px",
             borderRadius: "16px",
-            backgroundColor: CORAL,
+            backgroundColor: ACCENT,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -78,7 +78,7 @@ export default function OgImage() {
         }}
       >
         <div
-          style={{ width: "14px", height: "14px", borderRadius: "999px", backgroundColor: CORAL }}
+          style={{ width: "14px", height: "14px", borderRadius: "999px", backgroundColor: ACCENT }}
         />
         <div>Persistent 1:1 channel · Grounded in your live catalog · Open source (MIT)</div>
       </div>

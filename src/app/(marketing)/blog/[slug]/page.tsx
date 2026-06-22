@@ -53,10 +53,10 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
       </Link>
 
       <div className="mt-8">
-        <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+        <span className="rounded-full border border-border bg-background px-3 py-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           {post.tag}
         </span>
-        <h1 className="mt-4 text-balance text-3xl font-semibold tracking-tight sm:text-4xl">
+        <h1 className="mt-4 text-balance font-serif text-4xl font-medium leading-tight tracking-tight sm:text-5xl">
           {post.title}
         </h1>
         <p className="mt-4 text-lg text-muted-foreground">{post.description}</p>

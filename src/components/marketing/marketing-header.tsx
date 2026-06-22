@@ -18,8 +18,8 @@ import { BOOK_A_DEMO_URL, NAV_LINKS } from "@/lib/marketing/config";
 import { cn } from "@/lib/utils";
 
 /**
- * Sticky marketing header: transparent over the hero, then a frosted solid bar once the
- * page scrolls. Desktop nav anchors to the page sections; a Sheet holds the mobile menu.
+ * Sticky marketing header — an editorial black-on-white bar: serif wordmark, centered
+ * nav, and a single solid-black primary CTA. Gains a hairline border once scrolled.
  */
 export function MarketingHeader() {
   const [scrolled, setScrolled] = useState(false);
@@ -34,37 +34,36 @@ export function MarketingHeader() {
   return (
     <header
       className={cn(
-        "sticky top-0 z-50 w-full transition-colors duration-300",
-        scrolled
-          ? "border-b border-border/70 bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70"
-          : "border-b border-transparent bg-transparent",
+        "sticky top-0 z-50 w-full bg-background transition-shadow",
+        scrolled ? "border-b border-border" : "border-b border-transparent",
       )}
     >
-      <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-5 sm:px-6">
+      <div className="mx-auto flex h-[72px] w-full max-w-6xl items-center justify-between px-5 sm:px-8">
         <Link href="/" aria-label="Threadline home">
           <BrandLogo />
         </Link>
 
-        <nav className="hidden items-center gap-1 md:flex" aria-label="Primary">
+        <nav className="hidden items-center gap-8 md:flex" aria-label="Primary">
           {NAV_LINKS.map((link) => (
-            <Button key={link.href} asChild variant="ghost" size="sm">
-              <Link href={link.href}>{link.label}</Link>
-            </Button>
+            <Link
+              key={link.href}
+              href={link.href}
+              className="text-sm text-foreground/80 transition-colors hover:text-foreground"
+            >
+              {link.label}
+            </Link>
           ))}
         </nav>
 
-        <div className="hidden items-center gap-2 md:flex">
-          <Button asChild variant="ghost" size="sm">
-            <Link href="/login">Sign in</Link>
-          </Button>
-          <Button asChild variant="outline" size="sm">
-            <a href={BOOK_A_DEMO_URL}>Book a demo</a>
-          </Button>
-          <Button asChild size="sm">
-            <Link href="/signup">
-              Get started
-              <ArrowRight className="size-4" />
-            </Link>
+        <div className="hidden items-center gap-5 md:flex">
+          <Link
+            href="/login"
+            className="text-sm text-foreground/80 transition-colors hover:text-foreground"
+          >
+            Sign in
+          </Link>
+          <Button asChild className="rounded-md">
+            <Link href="/signup">Get started</Link>
           </Button>
         </div>
 
@@ -75,7 +74,7 @@ export function MarketingHeader() {
               <Menu className="size-5" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="right" className="w-72">
+          <SheetContent side="right" className="w-72 bg-background">
             <SheetHeader>
               <SheetTitle className="text-left">
                 <BrandLogo />

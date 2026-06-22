@@ -15,7 +15,9 @@ export const metadata: Metadata = {
 export default function ContactPage() {
   return (
     <div className="mx-auto w-full max-w-2xl px-5 py-20 sm:px-6 lg:py-28">
-      <h1 className="text-balance text-4xl font-semibold tracking-tight">Let&apos;s talk</h1>
+      <h1 className="text-balance font-serif text-5xl font-medium tracking-tight">
+        Let&apos;s talk
+      </h1>
       <p className="mt-4 text-lg text-muted-foreground">
         Threadline is open source and still early, so the fastest way to evaluate it is to run it
         yourself — the whole app works locally with mocked services, no API keys required. When
