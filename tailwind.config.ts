@@ -2,12 +2,11 @@ import type { Config } from "tailwindcss";
 import tailwindcssAnimate from "tailwindcss-animate";
 
 /**
- * Threadline design system.
+ * Threadline design system — a high-contrast, editorial identity.
  *
- * Brand identity (deliberately distinct from the reference product's cool slate):
- *  - Primary: "Threadline Coral" #E8623A — a warm, human terracotta.
- *  - Neutrals: warm stone grays (not cool slate).
- *  - Font: Plus Jakarta Sans (UI) + JetBrains Mono (code), wired in app/layout.tsx.
+ *  - Palette: near-black on white, monochrome neutrals.
+ *  - Type: Inter (UI/body) + Newsreader (display serif, via `font-serif`) +
+ *    JetBrains Mono (code), wired in app/layout.tsx.
  *
  * Colors are driven by HSL CSS variables defined in src/app/globals.css so that
  * shadcn/ui components and dark mode work out of the box.
@@ -70,6 +69,8 @@ const config: Config = {
       fontFamily: {
         sans: ["var(--font-sans)", "system-ui", "sans-serif"],
         mono: ["var(--font-mono)", "ui-monospace", "monospace"],
+        // Transitional display serif for headings (used via `font-serif`).
+        serif: ["var(--font-serif)", "Georgia", "Times New Roman", "serif"],
       },
       keyframes: {
         "accordion-down": {

@@ -2,7 +2,10 @@ import { MessageSquareText } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-/** Threadline wordmark — a coral chat mark plus the name. */
+/**
+ * Threadline wordmark — a chat glyph plus the name set in the display serif. Monochrome,
+ * so it adopts whatever theme it sits in (editorial black-on-white across the app).
+ */
 export function BrandLogo({
   className,
   iconOnly = false,
@@ -11,11 +14,11 @@ export function BrandLogo({
   iconOnly?: boolean;
 }) {
   return (
-    <span className={cn("flex items-center gap-2.5", className)}>
-      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-        <MessageSquareText className="h-4 w-4" />
-      </span>
-      {!iconOnly && <span className="text-lg font-semibold tracking-tight">Threadline</span>}
+    <span className={cn("flex items-center gap-2", className)}>
+      <MessageSquareText className="size-5 shrink-0" strokeWidth={1.75} />
+      {!iconOnly && (
+        <span className="font-serif text-xl font-medium tracking-tight">Threadline</span>
+      )}
     </span>
   );
 }

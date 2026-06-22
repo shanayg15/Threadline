@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
+import { JetBrains_Mono, Newsreader, Inter } from "next/font/google";
 import "./globals.css";
 
 import { Providers } from "@/components/providers";
 
-const sans = Plus_Jakarta_Sans({
+// Editorial identity, applied app-wide: Inter (a neutral grotesque) for UI/body, and
+// Newsreader (a transitional serif) for display headings via `font-serif`.
+const sans = Inter({
   variable: "--font-sans",
   subsets: ["latin"],
   display: "swap",
@@ -14,6 +16,13 @@ const mono = JetBrains_Mono({
   variable: "--font-mono",
   subsets: ["latin"],
   display: "swap",
+});
+
+const serif = Newsreader({
+  variable: "--font-serif",
+  subsets: ["latin"],
+  display: "swap",
+  style: ["normal", "italic"],
 });
 
 const APP_URL = process.env.APP_URL ?? "http://localhost:3000";
@@ -58,7 +67,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning className={`${sans.variable} ${mono.variable}`}>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`${sans.variable} ${mono.variable} ${serif.variable}`}
+    >
       <body className="min-h-screen font-sans antialiased">
         <Providers>{children}</Providers>
       </body>
