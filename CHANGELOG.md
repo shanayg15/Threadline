@@ -4,11 +4,30 @@ All notable changes to Threadline are documented here. The project is built
 milestone-by-milestone toward a usable V1; each milestone is a self-contained,
 verified increment.
 
+## UI — Unified editorial theme
+
+A single, high-contrast **black-on-white editorial** identity now spans the whole
+product — marketing site, auth, onboarding, and the console — replacing the earlier
+two-track look.
+
+### Changed
+
+- **Design tokens** (`globals.css`) are now monochrome by default (`:root` + `.dark`):
+  near-black on white, gray neutrals, no accent color.
+- **Typography**: UI/body unified on **Inter**; display and brand headings use the
+  **Newsreader** transitional serif (`font-serif`); JetBrains Mono for code.
+- **Wordmark** simplified to a monochrome chat glyph + the name in the display serif,
+  identical across marketing and app.
+- **Marketing sections** restyled to the editorial system — serif section headings, a
+  dots-on-a-line lifecycle, trigger-labeled campaign cards, a dark comparison column, a
+  hairline FAQ list, and the console showcase on a subtle 3D tilt.
+- Applied the theme at `body`/`:root` level so portaled UI (dropdowns, the mobile sheet,
+  toasts) inherits it too. No app logic, schema, or agent behavior changed.
+
 ## M9 — Marketing / Landing Site
 
-The public face of the product — a fast, static, accessible marketing site that clones
-the reference site's **information architecture** in **Threadline's own brand, copy, and
-identity**. M1–M9 complete.
+The public face of the product — a fast, static, accessible marketing site rendered
+entirely in **Threadline's own brand, copy, and identity**. M1–M9 complete.
 
 ### Added
 
@@ -20,9 +39,9 @@ identity**. M1–M9 complete.
   comparison table; a faithful **static recreation of the real M7 console** (in our brand,
   "Demo Apparel Co", real `Delivered`/`Sent` status — never a fake "Read"); honest,
   clearly-labeled **illustrative-only** social proof; a final CTA band; and a footer with
-  the open-source/GitHub line and our copyright (no YC badge).
+  the open-source/GitHub line and our copyright (no third-party endorsement badges).
 - **Markdown blog** (`/blog` + `/blog/[slug]`): a filesystem-backed reader (`gray-matter`
-  + `react-markdown`) with three original posts, styled with our own typography.
+  and `react-markdown`) with three original posts, styled with our own typography.
 - **Contact + placeholder legal pages** (`/contact`, `/privacy`, `/terms`). The primary
   CTA drives to `/signup`; "Book a demo" is configurable via `NEXT_PUBLIC_BOOK_A_DEMO_URL`
   (defaults to `/contact`).
@@ -31,11 +50,10 @@ identity**. M1–M9 complete.
 
 ### Guardrail
 
-- Clones the reference **IA only**. Original copy throughout; our coral-on-cream identity
-  (not the reference's serif-on-slate or bird logo); **no fabricated metrics, customers,
-  testimonials, or affiliations**; channels described honestly (SMS/MMS today; RCS,
-  WhatsApp & iMessage on the roadmap). A repo grep confirms zero occurrences of the
-  reference brand name, its taglines, `51%`, or "Y Combinator" in the marketing code.
+- Original copy and imagery throughout, in Threadline's own visual identity; **no
+  fabricated metrics, customers, testimonials, or affiliations**; channels described
+  honestly (SMS/MMS today; RCS, WhatsApp & iMessage on the roadmap). A repo grep gate
+  confirms the marketing code carries no fabricated metrics or claimed endorsements.
 
 ### Note
 

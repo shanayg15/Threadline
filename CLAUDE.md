@@ -87,9 +87,10 @@ worker`): heuristic delivery → event → playbook → quiet-hours-gated proact
    strip, lifecycle timeline, eight-campaign grid, "fill the gap" comparison, a static
    recreation of the real M7 console, honest (illustrative-only) social proof, a
    markdown blog (`/blog` + `/blog/[slug]`), an FAQ accordion, and SEO basics (metadata,
-   OG/Twitter image, robots, sitemap). Clones the reference IA only — **our** brand, copy,
-   and identity; no lifted metrics, customers, or affiliations; channels described
-   honestly (SMS/MMS today, the rest on the roadmap). ✅ **M1–M9 complete.**
+   OG/Twitter image, robots, sitemap). **Our** brand, copy, and identity throughout; no
+   invented metrics, customers, or affiliations; channels described honestly (SMS/MMS
+   today, the rest on the roadmap). The whole app shares one editorial black-on-white
+   theme (Inter + Newsreader serif). ✅ **M1–M9 complete.**
 
 ## Out of scope (by design)
 
